@@ -1,44 +1,95 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+/// @notice Interface for an on-chain ZKP verifier
 interface IVerifier {
     function verifyProof(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[] memory input
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[] memory input
     ) external view returns (bool);
 }
 
-contract Verifiable {
+/// @notice Verifiable Presentation (VP) structure for ZKP inputs
+struct VP {
+    uint256[2]    a;
+    uint256[2][2] b;
+    uint256[2]    c;
+    uint256[]     input;
+}
 
-    struct Verifier{
-        address addr;
+/**
+ * @title Verifiable
+ * @dev Manages a registry of ZKP verifier contracts and exposes a unified `verify` API.
+ *      Access control for registry modifications is owned by the contract owner.
+ */
+contract Verifiable is Ownable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    EnumerableSet.AddressSet private _verifiers;
+
+    /// @notice Emitted when a new verifier is registered
+    event VerifierAdded(address indexed verifier);
+    /// @notice Emitted when an existing verifier is removed
+    event VerifierRemoved(address indexed verifier);
+
+    /**
+     * @dev Initializes a new instance of Ownable.
+     */
+    constructor() Ownable(msg.sender) { }
+
+    /**
+     * @notice Register a new on-chain ZKP verifier contract
+     * @param verifier The address of a contract implementing IVerifier
+     */
+    function addVerifier(address verifier) external onlyOwner {
+        require(verifier != address(0), "Verifiable: zero address");
+        require(_verifiers.add(verifier), "Verifiable: already registered");
+        emit VerifierAdded(verifier);
     }
 
-    struct VP{
-        uint256[2]      a;
-        uint256[2][2]   b;
-        uint256[2]      c;
-        uint256[]       input;
+    /**
+     * @notice Unregister a verifier contract
+     * @param verifier The address to remove
+     */
+    function removeVerifier(address verifier) external onlyOwner {
+        require(_verifiers.remove(verifier), "Verifiable: not registered");
+        emit VerifierRemoved(verifier);
     }
 
-    mapping(address => Verifier) public verifiers;
-
-    function addVerifier(address addr) external { 
-        require(verifiers[addr].addr == address(0)); // ensure verifier is not registered
-        verifiers[addr] = Verifier({
-            addr: addr
-        });
+    /**
+     * @notice Check if an address is a registered verifier
+     * @param verifier The address to check
+     * @return True if registered
+     */
+    function isVerifier(address verifier) external view returns (bool) {
+        return _verifiers.contains(verifier);
     }
 
-    function verify(address addr, VP memory vp) view  public returns (bool) {
-        require(verifiers[addr].addr != address(0)); // ensure verifier is registered
-        
-        return IVerifier(verifiers[addr].addr).verifyProof(vp.a, vp.b, vp.c, vp.input);
+    /**
+     * @notice Get the full list of registered verifier addresses
+     * @return Array of verifier addresses
+     */
+    function getVerifiers() external view returns (address[] memory) {
+        return _verifiers.values();
     }
 
+    /**
+     * @notice Verify a proof via a registered verifier
+     * @param verifier The address of the verifier contract
+     * @param vp The verifiable presentation data
+     * @return True if the proof checks out
+     */
+    function verify(address verifier, VP calldata vp) public view returns (bool) {
+        require(_verifiers.contains(verifier), "Verifiable: verifier not found");
+        return IVerifier(verifier).verifyProof(vp.a, vp.b, vp.c, vp.input);
+    }
 
+    // === Example state info ===
     struct StateInfo {
         uint256 id;
         uint256 state;
@@ -48,24 +99,25 @@ contract Verifiable {
         uint256 createdAtBlock;
         uint256 replacedAtBlock;
     }
-    
-    function getStateInfoById(uint256 id) external view returns (StateInfo memory) {
-        // Only handle the specific mocked ID
+
+    /**
+     * @notice (Optional) Mocked getter for a hardcoded state
+     * @dev Retained for backward compatibility but can be overridden by a real storage solution
+     */
+    function getStateInfoById(uint256 id) external pure returns (StateInfo memory) {
         if (
-            id == 23059336182092717530402538631517012974515776249001969233049292365119689217
+            id == 23059336182092717530402538631517012974515776249001969233049292365119689217  /* example 256-bit ID */
         ) {
             return StateInfo({
                 id: id,
                 state: 288648600274475711174233815269229986964406022137315219531346496269730274570,
                 replacedByState: 0,
-                createdAtTimestamp: 1714400000, // mock timestamp
+                createdAtTimestamp: 1714400000,
                 replacedAtTimestamp: 0,
-                createdAtBlock: 18000000, // mock block
+                createdAtBlock: 18_000_000,
                 replacedAtBlock: 0
             });
         }
-
-        // If ID is not found, return empty struct
         return StateInfo({
             id: 0,
             state: 0,
