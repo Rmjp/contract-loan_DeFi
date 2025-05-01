@@ -40,7 +40,7 @@ contract Verifiable is Ownable {
     /**
      * @dev Initializes a new instance of Ownable.
      */
-    constructor() Ownable(msg.sender) { }
+    constructor() Ownable() { }
 
     /**
      * @notice Register a new on-chain ZKP verifier contract
