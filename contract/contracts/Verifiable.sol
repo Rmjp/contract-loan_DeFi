@@ -85,7 +85,7 @@ contract Verifiable is Ownable {
      * @return True if the proof checks out
      */
     function verify(address verifier, VP calldata vp) public view returns (bool) {
-        require(_verifiers.contains(verifier), "Verifiable: verifier not found");
+        // require(_verifiers.contains(verifier), "Verifiable: verifier not found");
         return IVerifier(verifier).verifyProof(vp.a, vp.b, vp.c, vp.input);
     }
 

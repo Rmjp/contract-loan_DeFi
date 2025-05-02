@@ -13,11 +13,11 @@ async function main() {
   console.log("Initial supply minted to deployer:", deployer.address);
 
   const tx = await contract.write.transfer([
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
     BigInt(1000) * BigInt(10) ** BigInt(18)
   ]);
 
-  console.log(`Sent 1,000 TEST to ${"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}`);
+  console.log(`Sent 1,000 TEST to ${"0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199"}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

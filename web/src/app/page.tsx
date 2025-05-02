@@ -279,7 +279,15 @@ export default function Home() {
     args: [
       loanIdNumber,
       lenderAddress as `0x${string}`,
-      [] // Empty array when there are no verify proofs
+      [{
+        a: [BigInt(vpA1), BigInt(vpA2)],
+        b: [
+          [BigInt(vpB11), BigInt(vpB12)],
+          [BigInt(vpB21), BigInt(vpB22)],
+        ],
+        c: [BigInt(vpC1), BigInt(vpC2)],
+        input: vpInput.split(',').map(i => BigInt(i.trim())),
+      }],
     ],
     onSuccess: () => {
       setMessage('Loan application submitted successfully!');
