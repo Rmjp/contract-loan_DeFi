@@ -104,7 +104,10 @@ export const Auth = () => {
   async function handleClickApprove() {
     setIsReady(false);
     const result = await approveMethod(msgBytes);
-    if (result.data?.type && result.data.type === PROTOCOL_CONSTANTS.PROTOCOL_MESSAGE_TYPE.AUTHORIZATION_REQUEST_MESSAGE_TYPE) {
+    console.log("result", result);
+    // if (result.data?.type && result.data.type === PROTOCOL_CONSTANTS.PROTOCOL_MESSAGE_TYPE.AUTHORIZATION_REQUEST_MESSAGE_TYPE) {
+    if (result.data?.type && result.data.type === PROTOCOL_CONSTANTS.PROTOCOL_MESSAGE_TYPE.CREDENTIAL_OFFER_MESSAGE_TYPE) {
+      console.log("payload", result.data);
       const newPayload = Base64.encode(JSON.stringify(result.data));
       navigate("/");
       setTimeout(_ => navigate(`/auth?type=base64&payload=${newPayload}`), 2000);
@@ -113,6 +116,7 @@ export const Auth = () => {
 
     if (result.code !== "ERR_NETWORK") navigate("/");
     else {
+      console.log("ERR 117");
       setError(result.message);
       setIsReady(true);
     }
@@ -120,7 +124,11 @@ export const Auth = () => {
   async function handleClickProof() {
     setIsReady(false);
     try {
-      const result = await proofMethod(msgBytes);
+      var result;
+      if (data.type.includes("contract-invoke-request")) {
+        // result = await (msgBytes);
+      }
+      result = await proofMethod(msgBytes);
       if (result.data?.type && result.data.type === PROTOCOL_CONSTANTS.PROTOCOL_MESSAGE_TYPE.AUTHORIZATION_REQUEST_MESSAGE_TYPE) {
         const newPayload = Base64.encode(JSON.stringify(result.data));
         navigate("/");

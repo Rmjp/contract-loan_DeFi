@@ -13,6 +13,7 @@ import {
 	PackageManager,
 	EthStateStorage,
 	AuthHandler,
+	ContractRequestHandler,
 } from '@0xpolygonid/js-sdk';
 
 
@@ -37,6 +38,15 @@ export class ExtensionService {
 		);
 		
 		let authHandler = new AuthHandler(packageMgr, proofService, credWallet);
+
+		let contractRequestHandler = new ContractRequestHandler(
+			packageMgr,
+			proofService,
+			credWallet,
+			wallet,
+			dataStorage,
+			authHandler
+		);
 		
 		if(!this.instanceCS) {
 					this.instanceES = {
@@ -46,6 +56,7 @@ export class ExtensionService {
 				wallet,
 				dataStorage,
 				authHandler,
+				contractRequestHandler,
 				status: INIT,
 			}
 		}
