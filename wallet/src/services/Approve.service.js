@@ -57,27 +57,27 @@ export async function proofMethod(msgBytes) {
     .catch((error) => error.toJSON());
 }
 
-export async function proofMethodInvoke(msgBytes) {
-  const { contractRequestHandler } = ExtensionService.getExtensionServiceInstance();
-  const authRequest = await contractRequestHandler.parseContractInvokeRequest(msgBytes);
-  const { body } = authRequest;
-  const { scope = [] } = body;
-  if (scope.length > 1) {
-    throw new Error("not support 2 scope");
-  }
-  const did = DID.parse(LocalStorageServices.getActiveAccountDid());
-  const response = await authHandler.handleAuthorizationRequest(
-    did,
-    msgBytes,
-  );
-  var config = {
-    headers: {
-      'Content-Type': 'text/plain'
-    },
-    responseType: 'json'
-  };
-  return await axios
-    .post(`${authRequest.body.callbackUrl}`, response.token, config)
-    .then((response) => response)
-    .catch((error) => error.toJSON());
-}
+// export async function proofMethodInvoke(msgBytes) {
+//   const { contractRequestHandler } = ExtensionService.getExtensionServiceInstance();
+//   const authRequest = await contractRequestHandler.parseContractInvokeRequest(msgBytes);
+//   const { body } = authRequest;
+//   const { scope = [] } = body;
+//   if (scope.length > 1) {
+//     throw new Error("not support 2 scope");
+//   }
+//   const did = DID.parse(LocalStorageServices.getActiveAccountDid());
+//   const response = await authHandler.handleAuthorizationRequest(
+//     did,
+//     msgBytes,
+//   );
+//   var config = {
+//     headers: {
+//       'Content-Type': 'text/plain'
+//     },
+//     responseType: 'json'
+//   };
+//   return await axios
+//     .post(`${authRequest.body.callbackUrl}`, response.token, config)
+//     .then((response) => response)
+//     .catch((error) => error.toJSON());
+// }

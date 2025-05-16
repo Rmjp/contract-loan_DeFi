@@ -29,7 +29,7 @@ export class ExtensionService {
 		
 		let proofService = new ProofService(wallet, credWallet, 
 			circuitStorage, new EthStateStorage(defaultEthConnectionConfig[0]),
-			{ipfsGatewayURL:"https://ipfs.io"});
+			{ipfsGatewayURL:"https://ipfs-proxy-cache.privado.id"});
 		
 		let packageMgr = await ExtensionService.getPackageMgr(
 			await circuitStorage.loadCircuitData('authV2'),
