@@ -14,15 +14,17 @@ import {
 	EthStateStorage,
 	AuthHandler,
 	ContractRequestHandler,
+	OnChainZKPVerifier,
 } from '@0xpolygonid/js-sdk';
+
 
 
 // const { proving } = JWZ;
 export class ExtensionService {
 	static instanceES;
-	static async init() {
+	static async init(signer) {
 		await CircuitStorageInstance.init();
-		let accountInfo = await WalletService.createWallet();
+		let accountInfo = await WalletService.createWallet(signer);
 		const { wallet, credWallet, dataStorage } = accountInfo;
 		
 		const circuitStorage = CircuitStorageInstance.getCircuitStorageInstance();
@@ -39,14 +41,8 @@ export class ExtensionService {
 		
 		let authHandler = new AuthHandler(packageMgr, proofService, credWallet);
 
-		let contractRequestHandler = new ContractRequestHandler(
-			packageMgr,
-			proofService,
-			credWallet,
-			wallet,
-			dataStorage,
-			authHandler
-		);
+		const onChainZKPVerifier = new OnChainZKPVerifier(defaultEthConnectionConfig, {didResolverUrl:"test"});
+		const contractRequestHandler = new ContractRequestHandler(packageMgr, proofService, onChainZKPVerifier);
 		
 		if(!this.instanceCS) {
 					this.instanceES = {
@@ -58,6 +54,7 @@ export class ExtensionService {
 				authHandler,
 				contractRequestHandler,
 				status: INIT,
+				signer,
 			}
 		}
 		console.log('Extension services has been initialized',this.instanceES);

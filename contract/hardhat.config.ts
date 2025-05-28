@@ -17,6 +17,11 @@ const config: HardhatUserConfig = {
     //   ],
     //   hardfork: "shanghai",
     // },
+    amoy: {
+      url: "https://rpc-amoy.polygon.technology", // Official Amoy RPC
+      chainId: 80002,
+      accounts: process.env.PRIVATE_KEY_AMOY ? [process.env.PRIVATE_KEY_AMOY] : [],
+    },
   },
   solidity: "0.8.20",
 };

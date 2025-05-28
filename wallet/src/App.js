@@ -5,6 +5,8 @@ import { ExtensionService } from './services/Extension.service';
 import { INIT } from './constants';
 import './App.css';
 import CircularProgress from '@mui/material/CircularProgress';
+import { BrowserProvider } from 'ethers'
+
 
 function App() {
   const [inited, setInited] = useState(false);
@@ -12,7 +14,24 @@ function App() {
   
   useEffect(()=>{
     const init = async () => {
-      const { status } = await ExtensionService.init();
+      // 1) grab the real MetaMask signer
+      const browserProvider = new BrowserProvider(window.ethereum);
+      await browserProvider.send("eth_requestAccounts", []);
+      const rawSigner = await browserProvider.getSigner();
+
+      // 2) wrap it so `.connect(...)` just returns the same signer
+      const signer = new Proxy(rawSigner, {
+        get(target, prop, receiver) {
+          if (prop === "connect") {
+            // ignore the passed provider and return the original signer
+            return (_provider) => target;
+          }
+          // forward everything else
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+
+      const { status } = await ExtensionService.init(signer);
       if(status === INIT)
         setInited(true);
       else

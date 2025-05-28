@@ -1,5 +1,5 @@
 export const RHS_URL = 'https://rhs-staging.polygonid.me';
-export const RPC_URL = 'https://rpc-mainnet.privado.id';
+export const RPC_URL = 'https://rpc-amoy.polygon.technology';
 
 export const defaultEthConnectionConfig =  [{
 	url: RPC_URL,
@@ -8,12 +8,12 @@ export const defaultEthConnectionConfig =  [{
 	maxGasPrice: '100000000000',
 	confirmationBlockCount: 5,
 	confirmationTimeout: 600000,
-	contractAddress: '0x3C9acB2205Aa72A05F6D77d708b5Cf85FCa3a896',
+	contractAddress: '0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124',
 	receiptTimeout: 600000,
 	rpcResponseTimeout: 5000,
 	waitReceiptCycleTime: 30000,
 	waitBlockCycleTime: 3000,
-	chainId: 21000
+	chainId: 80002
    }];
 
 export const INIT = 'Init';

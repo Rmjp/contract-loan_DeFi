@@ -13,15 +13,18 @@ import {
 	MerkleTreeIndexedDBStorage,
 	IndexedDBPrivateKeyStore,
 	CredentialStatusResolverRegistry,
+	CredentialStatusPublisherRegistry,
 	CredentialStatusType,
 	RHSResolver,
 	OnChainResolver,
 	IssuerResolver,
-	AgentResolver
+	AgentResolver,
+	Iden3OnchainSmtCredentialStatusPublisher,
+	OnChainRevocationStorage,
 } from '@0xpolygonid/js-sdk';
 
 export class WalletService {
-	static async createWallet() {
+	static async createWallet(signer) {
 		const keyStore = new IndexedDBPrivateKeyStore();
 		const bjjProvider = new BjjProvider(KmsKeyType.BabyJubJub, keyStore);
 		const kms = new KMS();
@@ -59,7 +62,20 @@ export class WalletService {
 
 
 		const credWallet = new CredentialWallet(dataStorage, resolvers);
-		let wallet = new IdentityWallet(kms, dataStorage, credWallet);
+
+		const onChainRevocationStorage = new OnChainRevocationStorage(
+			defaultEthConnectionConfig[0],
+			"0x7dF78ED37d0B39Ffb6d4D527Bb1865Bf85B60f81",
+			signer
+		);
+		const publisherRegistry = new CredentialStatusPublisherRegistry();
+
+		publisherRegistry.register(
+			CredentialStatusType.Iden3OnchainSparseMerkleTreeProof2023,
+			new Iden3OnchainSmtCredentialStatusPublisher(onChainRevocationStorage)
+		);
+
+		let wallet = new IdentityWallet(kms, dataStorage, credWallet, {credentialStatusPublisherRegistry:publisherRegistry});
 
 		return {
 			wallet: wallet,
