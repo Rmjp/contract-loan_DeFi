@@ -41,7 +41,7 @@ export class ExtensionService {
 		
 		let authHandler = new AuthHandler(packageMgr, proofService, credWallet);
 
-		const onChainZKPVerifier = new OnChainZKPVerifier(defaultEthConnectionConfig, {didResolverUrl:"test"});
+		const onChainZKPVerifier = new OnChainZKPVerifier(defaultEthConnectionConfig, {didResolverUrl:"https://resolver-dev.privado.id"});
 		const contractRequestHandler = new ContractRequestHandler(packageMgr, proofService, onChainZKPVerifier);
 		
 		if(!this.instanceCS) {

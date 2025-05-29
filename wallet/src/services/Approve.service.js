@@ -2,7 +2,7 @@ import axios from "axios";
 import { ExtensionService } from "./Extension.service";
 import { LocalStorageServices } from './LocalStorage.services';
 import { AuthHandler, FetchHandler, core } from '@0xpolygonid/js-sdk';
-import { getBigInt } from "ethers";
+import { ethers } from "ethers";
 const { DID } = core;
 
 export async function approveMethod(msgBytes) {
@@ -58,6 +58,29 @@ export async function proofMethod(msgBytes) {
     .catch((error) => error.toJSON());
 }
 
+// Helper function to convert a hex string to a Uint8Array
+function hexToBytes(hex) {
+    // Remove '0x' prefix if present
+    const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+    const bytes = new Uint8Array(cleanHex.length / 2);
+    for (let i = 0; i < cleanHex.length; i += 2) {
+        bytes[i / 2] = parseInt(cleanHex.substr(i, 2), 16);
+    }
+    return bytes;
+}
+
+// Helper function to convert a Uint8Array to a hex string
+function bytesToHex(bytes) {
+    return '0x' + Array.from(bytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+// Helper function to reverse a Uint8Array
+function reverseBytes(bytes) {
+    return new Uint8Array([...bytes].reverse());
+}
+
 export async function proofMethodOnChain(msgBytes) {
     const { contractRequestHandler, signer } = await ExtensionService.getExtensionServiceInstance();
 
@@ -73,7 +96,14 @@ export async function proofMethodOnChain(msgBytes) {
 
     const did = DID.parse(LocalStorageServices.getActiveAccountDid());
 
-    const challenge = getBigInt(1234);
+    const addressBytes20 = hexToBytes(signer.address);
+    const paddedBytes32 = new Uint8Array(32);
+    paddedBytes32.set(addressBytes20, 12);
+    const reversedPaddedBytes32 = reverseBytes(addressBytes20);
+    const challenge = ethers.toBigInt(bytesToHex(reversedPaddedBytes32));
+    
+    
+    console.log("Challenge:", challenge);
     const options = {
       senderDid: did,
       ethSigner: signer,
