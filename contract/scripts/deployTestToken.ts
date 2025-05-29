@@ -10,14 +10,14 @@ async function main() {
   const contract = await viem.deployContract("TestToken");
   
   console.log("TestToken deployed to:", contract);
-  console.log("Initial supply minted to deployer:", deployer.address);
+  console.log("Initial supply minted to deployer:", deployer.account.address);
 
   const tx = await contract.write.transfer([
-    "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+    "0xC565eA25F263150F3a5ECf764847a9E99F166A47",
     BigInt(1000) * BigInt(10) ** BigInt(18)
   ]);
 
-  console.log(`Sent 1,000 TEST to ${"0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199"}`);
+  console.log(`Sent 1,000 TEST to ${"0xC565eA25F263150F3a5ECf764847a9E99F166A47"}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -1,6 +1,7 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import dotenv from "dotenv";
+import "@openzeppelin/hardhat-upgrades";
 
 dotenv.config();
 
@@ -23,7 +24,36 @@ const config: HardhatUserConfig = {
       accounts: process.env.PRIVATE_KEY_AMOY ? [process.env.PRIVATE_KEY_AMOY] : [],
     },
   },
-  solidity: "0.8.20",
+  solidity: {
+    compilers: [
+      { 
+        version: "0.8.20", // For your contracts
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        }
+      },
+      { 
+        version: "0.8.27", // For @iden3/contracts if they require a specific newer version
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        }
+      }
+    ],
+    // If all contracts (yours and @iden3/contracts) can use 0.8.20, simplify to:
+    // version: "0.8.20",
+    // settings: {
+    //   optimizer: {
+    //     enabled: true,
+    //     runs: 200,
+    //   },
+    // }
+  },
 };
 
 export default config;
