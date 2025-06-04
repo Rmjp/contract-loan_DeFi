@@ -7,6 +7,21 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   networks: {
+    hardhat: {
+      chains: {
+        80002: {
+          hardforkHistory: {
+            "shanghai": 22486000,
+          }
+        },
+      },
+      forking: {
+        url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
+        // (Optional) Pin a block number to run tests on a deterministic state
+        blockNumber: 22486823
+      },
+      // hardfork: "cancun", 
+    },
     local: {
       url: "http://127.0.0.1:8545",
     },
