@@ -6,7 +6,6 @@ import BorrowerView from '@/components/BorrowerView'; // Assuming BorrowerView.j
 import { useAccount, useNetwork } from 'wagmi';
 import { polygonAmoyChain } from '../layout';
 import Link from 'next/link';
-import { useGlobalMessage } from '@/context/globalMessageContext'; // Hypothetical context for global messages
 
 // You'll need to pass setGlobalMessage to BorrowerView if it's expected from props.
 // This requires setGlobalMessage to be available in this page component,
@@ -25,10 +24,10 @@ export default function BorrowerPage() {
   const { isConnected }: { isConnected: boolean } = useAccount();
   const { chain } = useNetwork();
 
-
-  // This is a placeholder for setGlobalMessage.
-  // In a real app, you'd get this from a context provided by RootLayout or pass it down.
-  const { globalMessage, setGlobalMessage } = useGlobalMessage();
+  // console log when the page is rendered
+  useEffect(() => {
+    console.log('BorrowerPage rendered');
+  }, []);
 
   if (!isConnected) {
     return (
@@ -56,7 +55,7 @@ export default function BorrowerPage() {
   return (
     <div>
       {/* If BorrowerView expects setGlobalMessage, you need to provide it. */}
-      <BorrowerView setGlobalMessage={setGlobalMessage} />
+      <BorrowerView />
     </div>
   );
 }

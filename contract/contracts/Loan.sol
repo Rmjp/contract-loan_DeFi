@@ -23,7 +23,7 @@ contract LoanContract is
 
     // Represents an offer made by a lender for a specific loan request
     struct Offer {
-        address lender;             // The address of the lender making the offer
+        address lender;           // The address of the lender making the offer
         uint256 amountOffered;      // The loan amount proposed by the lender
         uint256 paybackTimeOffered; // The due date (timestamp) proposed by the lender
         uint256 interestBpsOffered; // The interest rate in basis points (e.g., 500 = 5%) proposed by the lender
@@ -52,9 +52,9 @@ contract LoanContract is
 
     // Represents a lender registered on the platform
     struct Lender {
-        bool registered;                // True if the lender is registered
-        uint64[] requiredRequestIds;    // Array of ZKP request IDs the lender requires from borrowers
-        uint256[] fundedLoans;          // Array of loan IDs funded by this lender
+        bool registered;            // True if the lender is registered
+        uint64[] requiredRequestIds; // Array of ZKP request IDs the lender requires from borrowers
+        uint256[] fundedLoans;       // Array of loan IDs funded by this lender
     }
 
     mapping(uint256 => Loan) public loans; // Mapping from loan ID to Loan details
@@ -310,6 +310,8 @@ contract LoanContract is
      */
     function getOffers(uint256 loanId) external view returns (Offer[] memory) {
         require(loans[loanId].borrower != address(0), "LC: Loan does not exist");
+        // No specific borrower check here, as offers might be viewable publicly or by other potential participants.
+        // If only the borrower should see offers before acceptance, add onlyBorrower(loanId) modifier.
         return loans[loanId].offers;
     }
 
@@ -383,5 +385,50 @@ contract LoanContract is
         currentLoan.repaid = true;
 
         emit LoanRepaid(loanId, _msgSender(), totalRepayment);
+    }
+
+    // --- Getter Functions ---
+
+    /**
+     * @notice Allows a borrower to view the details of their own loan.
+     * @param loanId The ID of the loan.
+     * @return The Loan struct containing all details of the specified loan.
+     */
+    function getLoanDetails(uint256 loanId) external view onlyBorrower(loanId) returns (Loan memory) {
+        require(loans[loanId].borrower != address(0), "LC: Loan does not exist"); // Additional check
+        return loans[loanId];
+    }
+
+    /**
+     * @notice Retrieves the number of offers submitted for a specific loan.
+     * @param loanId The ID of the loan.
+     * @return The number of offers.
+     */
+    function getOfferCount(uint256 loanId) external view returns (uint256) {
+        require(loans[loanId].borrower != address(0), "LC: Loan does not exist");
+        return loans[loanId].offers.length;
+    }
+
+     /**
+     * @notice Retrieves a specific offer by its index for a given loan.
+     * @dev This can be used if fetching all offers at once is too gas-intensive or not needed.
+     * @param loanId The ID of the loan.
+     * @param offerIndex The index of the offer.
+     * @return The Offer struct.
+     */
+    function getOfferByIndex(uint256 loanId, uint256 offerIndex) external view returns (Offer memory) {
+        require(loans[loanId].borrower != address(0), "LC: Loan does not exist");
+        require(offerIndex < loans[loanId].offers.length, "LC: Invalid offer index");
+        return loans[loanId].offers[offerIndex];
+    }
+
+    /**
+    * @notice Retrieves all loan IDs funded by a specific lender.
+    * @param lenderAddr The address of the lender.
+    * @return An array of loan IDs.
+    */
+    function getLenderFundedLoans(address lenderAddr) external view returns (uint256[] memory) {
+        require(lenders[lenderAddr].registered, "LC: Lender not registered");
+        return lenders[lenderAddr].fundedLoans;
     }
 }

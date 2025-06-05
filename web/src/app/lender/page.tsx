@@ -5,7 +5,6 @@ import LenderView from '@/components/LenderView'; // Assuming LenderView.js is i
 import { useAccount, useNetwork } from 'wagmi';
 import Link from 'next/link';
 import { polygonAmoyChain } from '../layout';
-import { useGlobalMessage } from '@/context/globalMessageContext';
 
 // Similar to BorrowerPage, setGlobalMessage needs to be handled.
 // import { useGlobalMessage } from '../contexts/GlobalMessageContext'; // Hypothetical context
@@ -14,8 +13,6 @@ export default function LenderPage() {
   // const { setGlobalMessage } = useGlobalMessage(); // Example if using context
   const { isConnected } = useAccount();
   const { chain } = useNetwork();
-
-  const { globalMessage, setGlobalMessage } = useGlobalMessage();
 
   if (!isConnected) {
     return (
@@ -42,7 +39,7 @@ export default function LenderPage() {
 
   return (
     <div>
-      <LenderView setGlobalMessage={setGlobalMessage} />
+      <LenderView />
     </div>
   );
 }

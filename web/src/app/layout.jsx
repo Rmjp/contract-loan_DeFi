@@ -1,7 +1,7 @@
 // app/layout.js
 'use client';
 
-import { useState, useEffect, createContext } from 'react';
+import { useState, useEffect, createContext, useMemo } from 'react';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 // We will define polygonAmoy manually
 import { publicProvider } from 'wagmi/providers/public';
@@ -10,10 +10,11 @@ import Link from 'next/link';
 import { useAccount, useConnect, useNetwork, useDisconnect } from 'wagmi';
 import { defineChain } from 'viem'; // Import defineChain
 import './globals.css'; // Ensure you have a globals.css for Tailwind
-import { setGlobalMessageContext } from '@/context/globalMessageContext';
+import { GlobalMessageProvider, useGlobalMessage } from '@/context/globalMessageContext';
 
 // 1. Manually define Polygon Amoy chain
 // This export allows other files (like page.js for borrower/lender) to import it
+
 export const polygonAmoyChain = defineChain({
   id: 80002,
   name: 'Polygon Amoy',
@@ -28,6 +29,21 @@ export const polygonAmoyChain = defineChain({
   },
   testnet: true,
 });
+
+// export const polygonAmoyChain = defineChain({
+//   id: 31337,
+//   name: 'Polygon Amoy',
+//   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+//   rpcUrls: {
+//     default: { http: ['http://127.0.0.1:8545/'] },
+//     public: { http: ['http://127.0.0.1:8545/'] },
+//   },
+//   blockExplorers: {
+//     default: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy' },
+//     etherscan: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy'},
+//   },
+//   testnet: true,
+// });
 
 // 2. Configure chains & providers, using the manually defined Polygon Amoy
 const { chains, publicClient } = configureChains(
@@ -131,12 +147,18 @@ export default function RootLayout({ children }) {
   const [mounted, setMounted] = useState(false);
   const [globalMessage, setGlobalMessage] = useState('');
 
-  const globalMessageContext = createContext();
-  setGlobalMessageContext(globalMessageContext);
+  const contextValue = useMemo(() => ({
+    globalMessage,
+    setGlobalMessage,
+  }), [globalMessage]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    console.log("re render");
+  }, [setGlobalMessage]);
 
   // useEffect(() => {
   //   if (globalMessage) {
@@ -174,16 +196,8 @@ export default function RootLayout({ children }) {
           <div className="max-w-5xl mx-auto p-4 md:p-6">
             <AppHeader setGlobalMessage={setGlobalMessage} />
 
-            {true && (
-              <div className={`my-4 p-3 rounded-md text-white border shadow-lg text-sm ${globalMessage.toLowerCase().includes('error') || globalMessage.toLowerCase().includes('failed') || globalMessage.toLowerCase().includes('incorrect') ? 'bg-red-600 border-red-500' : 'bg-sky-600 border-sky-500'}`}>
-                msg: {globalMessage}
-              </div>
-            )}
-
             <main className="mt-6">
-              <globalMessageContext.Provider value={{ globalMessage, setGlobalMessage }}>
               {children}
-              </globalMessageContext.Provider>
             </main>
 
             <footer className="text-center mt-10 py-5 border-t border-slate-700">

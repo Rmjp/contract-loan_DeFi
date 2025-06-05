@@ -1,0 +1,35 @@
+{
+    "body": {
+        "reason": "for testing purposes",
+        "scope":
+[
+  {
+    "circuitId": "credentialAtomicQueryMTPV2OnChain",
+    "id": 1749753999,
+    "query": {
+      "allowedIssuers": [
+        "*"
+      ],
+      "context": "ipfs://QmdH1Vu79p2NcZLFbHxzJnLuUHJiMZnBeT7SNpLaqK7k9X",
+      "credentialSubject": {
+        "city": {
+          "$eq": "Paris"
+        }
+      },
+      "type": "POAP01"
+    }
+  }
+],
+        "transaction_data": {
+            "chain_id": 80002,
+            "contract_address": "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c",
+            "method_id": "0xade09fcd",
+            "network": "polygon-amoy"
+        }
+    },
+    "from": "did:iden3:polygon:amoy:x6x5sor7zpyefHwZu9RE4xiuRWBkq9xAEHxrKbKWb",
+    "id": "a5568008-dff0-4cf0-ba0b-8deed77a8218",
+    "thid": "a5568008-dff0-4cf0-ba0b-8deed77a8218",
+    "typ": "application/iden3comm-plain-json",
+    "type": "https://iden3-communication.io/proofs/1.0/contract-invoke-request"
+}

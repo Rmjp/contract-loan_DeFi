@@ -1,4 +1,10 @@
-export const CONTRACT_ADDRESS = "0xAaB1A0025bD367BBa64e9Fbd77611B66A90ae4D5";
+export const WALLET_URL = "http://localhost:3000/index.html#/auth?type=base64&payload=";
+
+export const TOKEN_ADDRESS_LIST = [
+  { name: 'Test', address: "0x17E6459067dDbB870F8D4E961454eC39C695d35C" }
+  ]
+
+export const CONTRACT_ADDRESS = "0x93DEc02344D82C8238C6370De9e5b77966139c27";
 
 export const ERC20_ABI = [
   {
@@ -218,7 +224,7 @@ export const CONTRACT_ABI = [
           "type": "address"
         }
       ],
-      "name": "LoanApplied",
+      "name": "LoanApplicationSent",
       "type": "event"
     },
     {
@@ -264,11 +270,23 @@ export const CONTRACT_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "interestChosen",
+          "name": "amountAgreed",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "agreedDueDate",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "interestBpsAgreed",
           "type": "uint256"
         }
       ],
-      "name": "LoanOfferAccepted",
+      "name": "LoanOfferAcceptedByBorrower",
       "type": "event"
     },
     {
@@ -287,7 +305,7 @@ export const CONTRACT_ABI = [
           "type": "address"
         }
       ],
-      "name": "LoanOfferRejected",
+      "name": "LoanOfferRejectedByLender",
       "type": "event"
     },
     {
@@ -308,7 +326,19 @@ export const CONTRACT_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "interestOffered",
+          "name": "amountOffered",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "paybackTimeOffered",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "interestBpsOffered",
           "type": "uint256"
         }
       ],
@@ -370,13 +400,13 @@ export const CONTRACT_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "maxInterest",
+          "name": "maxInterestBps",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "dueDate",
+          "name": "requestedDueDate",
           "type": "uint256"
         }
       ],
@@ -475,24 +505,6 @@ export const CONTRACT_ABI = [
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "loanId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "lenderAddr",
-          "type": "address"
-        }
-      ],
-      "name": "applyForLoan",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "uint64",
           "name": "requestId",
           "type": "uint64"
@@ -530,6 +542,193 @@ export const CONTRACT_ABI = [
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "lenderAddr",
+          "type": "address"
+        }
+      ],
+      "name": "getLenderFundedLoans",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getLoanDetails",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "contract IERC20",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountRequested",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxInterestBps",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "requestedDueDate",
+              "type": "uint256"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "lender",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "amountOffered",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "paybackTimeOffered",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "interestBpsOffered",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct LoanContract.Offer[]",
+              "name": "offers",
+              "type": "tuple[]"
+            },
+            {
+              "internalType": "address",
+              "name": "selectedLender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountAgreed",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "interestBpsAgreed",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "agreedDueDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "funded",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "repaid",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct LoanContract.Loan",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "offerIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "getOfferByIndex",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "lender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountOffered",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "paybackTimeOffered",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "interestBpsOffered",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct LoanContract.Offer",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getOfferCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "loanId",
           "type": "uint256"
@@ -546,7 +745,17 @@ export const CONTRACT_ABI = [
             },
             {
               "internalType": "uint256",
-              "name": "interestOffered",
+              "name": "amountOffered",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "paybackTimeOffered",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "interestBpsOffered",
               "type": "uint256"
             }
           ],
@@ -588,6 +797,25 @@ export const CONTRACT_ABI = [
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "lenderAddr",
+          "type": "address"
+        }
+      ],
+      "name": "isLenderRegistered",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -654,12 +882,12 @@ export const CONTRACT_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "maxInterest",
+          "name": "maxInterestBps",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "dueDate",
+          "name": "requestedDueDate",
           "type": "uint256"
         },
         {
@@ -669,7 +897,17 @@ export const CONTRACT_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "interest",
+          "name": "amountAgreed",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "interestBpsAgreed",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "agreedDueDate",
           "type": "uint256"
         },
         {
@@ -756,17 +994,17 @@ export const CONTRACT_ABI = [
       "inputs": [
         {
           "internalType": "contract IERC20",
-          "name": "token",
+          "name": "tokenAddr",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "amountRequested",
+          "name": "amount",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "maxInterest",
+          "name": "maxInterestBps",
           "type": "uint256"
         },
         {
@@ -808,11 +1046,39 @@ export const CONTRACT_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "interestOffered",
+          "name": "amountOffered",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "paybackTimeOffered",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "interestBpsOffered",
           "type": "uint256"
         }
       ],
       "name": "reviewApplicationAndSubmitOffer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "loanId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "lenderAddr",
+          "type": "address"
+        }
+      ],
+      "name": "sendLoanApplication",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

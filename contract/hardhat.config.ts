@@ -18,9 +18,9 @@ const config: HardhatUserConfig = {
       forking: {
         url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
         // (Optional) Pin a block number to run tests on a deterministic state
-        blockNumber: 22486823
+        blockNumber: 22524270
       },
-      // hardfork: "cancun", 
+      // hardfork: "cancun",
     },
     local: {
       url: "http://127.0.0.1:8545",
