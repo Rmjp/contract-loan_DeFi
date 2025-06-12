@@ -3,7 +3,7 @@ import { upgrades, ethers  } from "hardhat";
 async function main() {
   const universalVerifierAddressAmoy = "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c"; // Replace with actual Amoy UniversalVerifier address if different
 
-  const LoanContractFactory = await ethers.getContractFactory("LoanContract");
+  const LoanContractFactory = await ethers.getContractFactory("LoanMarket");
 
   console.log("Deploying LoanContract (upgradeable)...");
   const loanContractProxy = await upgrades.deployProxy(

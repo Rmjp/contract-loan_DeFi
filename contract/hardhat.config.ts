@@ -3,6 +3,10 @@ import "@nomicfoundation/hardhat-toolbox-viem";
 import dotenv from "dotenv";
 import "@openzeppelin/hardhat-upgrades";
 
+import '@typechain/hardhat'
+import '@nomicfoundation/hardhat-ethers'
+import '@nomicfoundation/hardhat-chai-matchers'
+
 dotenv.config();
 
 const config: HardhatUserConfig = {
