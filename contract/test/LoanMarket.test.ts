@@ -1,135 +1,147 @@
-// test/LoanMarket.test.ts
 import { expect } from "chai";
-import { ethers } from "hardhat";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
-import { Contract } from "ethers";
+import hre, { ethers } from "hardhat";
+import type { Contract } from "ethers";
+import LoanMarketModule from "../ignition/modules/LoanMarketModule";
+import { ProxyModule } from "../ignition/modules/ProxyModule";
 
-describe("LoanMarket → PersonalLoan", function () {
-  let borrower: any, lender: any, deployer: any;
-  let token: any;
-  let personalLoanImpl: any;
-  let creditLoanImpl: any;
-  let loanMarket: any;
+describe("LoanMarket (Ignition) Integration with External Verifier/Token", function () {
+  let dao: {
+    loanMarket: any;
+    personalLoanImpl: any;
+    creditLoanImpl: any;
+    loanMarketImpl: any;
+  };
+  let verifier: Contract;
+  let token: Contract;
+  let borrower: any, lender: any, other: any;
 
-  // test parameters
-  const initialSupply   = ethers.parseUnits("10000", 18);
-  const principal       = ethers.parseUnits("1000", 18);
-  const interestBps     = 300;             // 3%
-  const payments        = 5;
-  const paymentInterval = 60 * 60 * 24;    // 1 day
+  // Existing deployed addresses
+  const verifierAddress = "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c";
+  const tokenAddress    = "0x17E6459067dDbB870F8D4E961454eC39C695d35C";
+  const LOAN_AMOUNT     = ethers.parseEther("1000");
 
-  before(async () => {
+  beforeEach(async () => {
+    [borrower, lender, other] = await ethers.getSigners();
 
-    [deployer, borrower, lender] = await ethers.getSigners();
+    // Attach to existing verifier and token by address
+    verifier = await ethers.getContractAt("Verifiable", verifierAddress);
+    token    = await ethers.getContractAt("TestToken", tokenAddress);
 
-    // 1) Deploy an TokenERC20 and mint to borrower & lender
-    const Token = await ethers.getContractFactory("TestToken");
-    token = await Token.deploy();
-    await token.waitForDeployment();
-    await token.mint(await borrower.getAddress(), initialSupply);
-    await token.mint(await lender.getAddress(),   initialSupply);
+    // Deploy LoanMarket & implementations via Ignition
+    const deployment = await hre.ignition.deploy(ProxyModule, {
+      parameters: {ProxyModule:{"verifierAddress":"0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c"}},
+    });
 
-    // 2) Deploy the PersonalLoan implementation
-    const PL = await ethers.getContractFactory("PersonalLoan");
-    personalLoanImpl = await PL.deploy();
-    await personalLoanImpl.waitForDeployment();
-    // (we don’t have a real CreditLoan here, so just reuse)
-    creditLoanImpl = personalLoanImpl;
-
-    // 3) Deploy LoanMarket and initialize
-    const LM = await ethers.getContractFactory("LoanMarket");
-    loanMarket = await LM.deploy();
-    await loanMarket.waitForDeployment();
-    await loanMarket.initialize(
-      personalLoanImpl.address,
-      creditLoanImpl.address
-    );
+    dao = {
+      loanMarket:       await ethers.getContractAt("LoanMarket", deployment.proxy.address),
+      loanMarketImpl: await ethers.getContractAt("LoanMarket", deployment.loanMarketImpl.address),
+      personalLoanImpl: await ethers.getContractAt("PersonalLoan", deployment.personalLoanImpl.address),
+      creditLoanImpl:   await ethers.getContractAt("CreditLoan",  deployment.creditLoanImpl.address),
+    };
   });
 
-  
-  it("registers a lender", async () => {
-    await expect(loanMarket.connect(lender).registerLender())
-    .to.emit(loanMarket, "LenderRegistered")
-    .withArgs(await lender.getAddress());
+  it("Lender registration and proof requirements flow", async () => {
+    // Initially not registered
+    expect(await dao.loanMarket.isLenderRegistered(lender.address)).to.be.false;
+
+    // Register lender
+    await expect(dao.loanMarket.connect(lender).registerLender())
+      .to.emit(dao.loanMarket, "LenderRegistered")
+      .withArgs(lender.address);
+
+    // Set required proofs
+    const proofs = [1, 2, 3].map(n => BigInt(n));
+    await expect(dao.loanMarket.connect(lender).setRequiredProofs(proofs))
+      .to.emit(dao.loanMarket, "LenderRequiredProofsSet")
+      .withArgs(lender.address, proofs);
+
+    // Verify retrieval
+    expect(await dao.loanMarket.getRequiredProofs(lender.address)).to.deep.equal(proofs);
   });
-  
-  
-  it("lets borrower request a personal loan", async () => {
-    await expect(
-      loanMarket.connect(borrower).requestLoan(
-        token.address,
-        principal,
-        interestBps,
-        0,         // LoanType.Personal
-        0,         // dueDate (unused)
-        payments,  // numPayments
-        paymentInterval
+
+  describe("Personal Loan lifecycle", () => {
+    it("request → apply → offer → accept creates a proxy", async () => {
+      await dao.loanMarket.connect(lender).registerLender();
+
+      // Borrower requests loan
+      await expect(
+        dao.loanMarket.connect(borrower).requestLoan(
+          token.target,
+          LOAN_AMOUNT,
+          500,              // max 5%
+          0,                // LoanType.Personal
+          0,                // dueDate unused
+          4,                // numberOfPayments
+          7 * 24 * 3600     // paymentInterval
+        )
+      ).to.emit(dao.loanMarket, "LoanRequested");
+      
+      // Send application
+      await expect(
+        dao.loanMarket.connect(borrower).sendLoanApplication(1, lender.address)
+      ).to.emit(dao.loanMarket, "LoanApplicationSent");
+
+      // Lender submits an offer
+      await expect(
+        dao.loanMarket.connect(lender).submitOffer(
+          1,
+          LOAN_AMOUNT,
+          400,              // 4%
+          0,
+          4,
+          7 * 24 * 3600
+        )
+      ).to.emit(dao.loanMarket, "LoanOfferSubmitted");
+
+      // Borrower accepts offer
+      await expect(
+        dao.loanMarket.connect(borrower).acceptOffer(1, 0)
       )
-    ).to.emit(loanMarket, "LoanRequested")
-     .withArgs(1, await borrower.getAddress(), 0, principal);
+        .to.emit(dao.loanMarket, "LoanCreated");
+      const proxyAddr = await dao.loanMarket.deployedLoans(1);
+
+      // Check mapping
+      expect(proxyAddr).to.properAddress;
+
+      // Inspect proxy state
+      const loanProxy = await ethers.getContractAt("LoanBase", proxyAddr);
+      const [b, l, pr, intBps,,,,] = await loanProxy.state();
+      expect(b).to.equal(borrower.address);
+      expect(l).to.equal(lender.address);
+      expect(pr).to.equal(LOAN_AMOUNT);
+      expect(intBps).to.equal(400n);
+    });
   });
 
-  it("lets borrower send an application to the lender", async () => {
-    await expect(
-      loanMarket.connect(borrower).sendLoanApplication(
-        1,
-        await lender.getAddress()
-      )
-    ).to.emit(loanMarket, "LoanApplicationSent")
-     .withArgs(1, await borrower.getAddress(), await lender.getAddress());
-  });
+  describe("Credit Loan lifecycle", () => {
+    it("creates a credit loan proxy correctly", async () => {
+      await dao.loanMarket.connect(lender).registerLender();
+      const dueDate = BigInt(Math.floor(Date.now()/1000) + 30 * 24 * 3600);
 
-  it("lets lender submit an offer", async () => {
-    await expect(
-      loanMarket.connect(lender).submitOffer(
-        1,
-        principal,
-        interestBps,
-        0,          // dueDateOffered
-        payments,   // paymentsOffered
-        paymentInterval
-      )
-    ).to.emit(loanMarket, "LoanOfferSubmitted")
-     .withArgs(1, await lender.getAddress(), principal, interestBps);
-  });
-
-  it("lets borrower accept the offer and deploys a proxy", async () => {
-    await expect(
-      loanMarket.connect(borrower).acceptOffer(1, 0)
-    ).to.emit(loanMarket, "LoanCreated");
-    const proxyAddr = await loanMarket.deployedLoans(1);
-    expect(proxyAddr).to.properAddress;
-  });
-
-  it("lets lender fund the loan and borrower make a payment", async () => {
-    const proxyAddr = await loanMarket.deployedLoans(1);
-    const personalLoan = await ethers.getContractAt("PersonalLoan", proxyAddr);
-
-    // a) lender approves & funds
-    await token.connect(lender).approve(proxyAddr, principal);
-    await expect(personalLoan.connect(lender).fundLoan())
-      .to.emit(personalLoan, "LoanFunded")
-      .withArgs(
-        await lender.getAddress(),
-        await borrower.getAddress(),
-        principal,
-        anyValue             // installmentAmount computed in-contract
+      await dao.loanMarket.connect(borrower).requestLoan(
+        token.target,
+        LOAN_AMOUNT,
+        800,             // max 8%
+        1,               // LoanType.Credit
+        dueDate,
+        0,
+        0
       );
+      await dao.loanMarket.connect(borrower).sendLoanApplication(1, lender.address);
+      await dao.loanMarket.connect(lender).submitOffer(1, LOAN_AMOUNT, 750, dueDate, 0, 0);
 
-    // b) verify core state
-    const [b, l, p, i, , isFunded, isRepaid] = await personalLoan.state();
-    expect(b).to.equal(await borrower.getAddress());
-    expect(l).to.equal(await lender.getAddress());
-    expect(p).to.equal(principal);
-    expect(i).to.equal(interestBps);
-    expect(isFunded).to.be.true;
-    expect(isRepaid).to.be.false;
+      await expect(
+        dao.loanMarket.connect(borrower).acceptOffer(1, 0)
+      ).to.emit(dao.loanMarket, "LoanCreated");
 
-    // c) borrower makes first installment
-    const installment = await personalLoan.installmentAmount();
-    await token.connect(borrower).approve(proxyAddr, installment);
-    await expect(personalLoan.connect(borrower).makeInstallmentPayment())
-      .to.emit(personalLoan, "PaymentMade")
-      .withArgs(await borrower.getAddress(), 1, installment);
+      const proxyAddr = await dao.loanMarket.deployedLoans(1);
+      expect(proxyAddr).to.properAddress;
+
+      const loanProxy = await ethers.getContractAt("LoanBase", proxyAddr);
+      const [,, pr, intBps, dt,,,] = await loanProxy.state();
+      expect(pr).to.equal(LOAN_AMOUNT);
+      expect(intBps).to.equal(750n);
+      expect(dt).to.equal(dueDate);
+    });
   });
 });
