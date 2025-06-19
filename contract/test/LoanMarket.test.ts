@@ -267,7 +267,112 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
     const avail = await creditLoan.getAvailableCredit();
     expect(avail).to.equal(LOAN_AMOUNT - ethers.parseEther("300"));
   });
+  });
+
+  describe("PersonalLoan Contract Functions", function () {
+    let personalLoan: Contract;
+    const NUM_PAYMENTS = 4n;
+    const INTERVAL = 7n * 24n * 3600n; // 1 week
+    const INTEREST_BPS = 400n;
+
+    function calcInstallment(principal: bigint, interestBps: bigint, n: bigint, interval: bigint) {
+      if (interestBps === 0n) return principal / n;
+      const WAD = 10n ** 18n;
+      const BPS_DIV = 10000n;
+      const YEAR = 365n * 24n * 3600n;
+      const rate = (interestBps * WAD * interval) / (BPS_DIV * YEAR);
+      const rPlusOne = rate + WAD;
+      let pow = WAD;
+      for (let i = 0n; i < n; i++) {
+        pow = (pow * rPlusOne) / WAD;
+      }
+      const numerator = (principal * rate * pow) / WAD;
+      const denominator = pow - WAD;
+      return numerator / denominator;
+    }
+
+    beforeEach(async () => {
+      [borrower, lender, other] = await ethers.getSigners();
+
+      verifier = await ethers.getContractAt("Verifiable", verifierAddress);
+      token = await ethers.getContractAt("TestToken", tokenAddress);
+
+      const deployment = await hre.ignition.deploy(ProxyModule, {
+        parameters: { ProxyModule: { verifierAddress } },
+      });
+      dao = {
+        loanMarket: await ethers.getContractAt("LoanMarket", deployment.proxy.address),
+        loanMarketImpl: await ethers.getContractAt("LoanMarket", deployment.loanMarketImpl.address),
+        personalLoanImpl: await ethers.getContractAt("PersonalLoan", deployment.personalLoanImpl.address),
+        creditLoanImpl: await ethers.getContractAt("CreditLoan", deployment.creditLoanImpl.address),
+      };
+
+      await dao.loanMarket.connect(lender).registerLender();
+
+      await dao.loanMarket.connect(borrower).requestLoan(
+        token.target,
+        LOAN_AMOUNT,
+        800,
+        0,
+        0,
+        Number(NUM_PAYMENTS),
+        Number(INTERVAL)
+      );
+      await dao.loanMarket.connect(borrower).sendLoanApplication(1, lender.address);
+      await dao.loanMarket.connect(lender).submitOffer(
+        1,
+        LOAN_AMOUNT,
+        Number(INTEREST_BPS),
+        0,
+        Number(NUM_PAYMENTS),
+        Number(INTERVAL)
+      );
+      await dao.loanMarket.connect(borrower).acceptOffer(1, 0);
+
+      const proxyAddr = await dao.loanMarket.deployedLoans(1);
+      personalLoan = await ethers.getContractAt("PersonalLoan", proxyAddr);
+    });
+
+    it("fundLoan() transfers funds and sets installment & due date", async () => {
+      const expInstallment = calcInstallment(LOAN_AMOUNT, INTEREST_BPS, NUM_PAYMENTS, INTERVAL);
+      const balBefore = await token.balanceOf(borrower.address);
+
+      await token.connect(lender).approve(personalLoan.target, LOAN_AMOUNT);
+      const tx = await personalLoan.connect(lender).fundLoan();
+      await expect(tx)
+        .to.emit(personalLoan, "LoanFunded")
+        .withArgs(lender.address, borrower.address, LOAN_AMOUNT, expInstallment);
+
+      const balAfter = await token.balanceOf(borrower.address);
+      expect(balAfter - balBefore).to.equal(LOAN_AMOUNT);
+
+      expect(await personalLoan.installmentAmount()).to.equal(expInstallment);
+
+      const block = await ethers.provider.getBlock(tx.blockNumber!);
+      expect(await personalLoan.nextDueDate()).to.equal(BigInt(block.timestamp) + INTERVAL);
+    });
+
+    it("makeInstallmentPayment() updates counts and balances", async () => {
+      await token.connect(lender).approve(personalLoan.target, LOAN_AMOUNT);
+      const txFund = await personalLoan.connect(lender).fundLoan();
+      await txFund.wait();
+
+      const installment = await personalLoan.installmentAmount();
+      await token.connect(borrower).approve(personalLoan.target, installment);
+
+      const principalBefore = await personalLoan.principalAmount();
+      const dueBefore = await personalLoan.nextDueDate();
+
+      await expect(personalLoan.connect(borrower).makeInstallmentPayment())
+        .to.emit(personalLoan, "PaymentMade")
+        .withArgs(borrower.address, 1, installment);
+
+      expect(await personalLoan.paymentsMade()).to.equal(1);
+      expect(await personalLoan.principalAmount()).to.be.lt(principalBefore);
+      expect(await personalLoan.nextDueDate()).to.equal(dueBefore + INTERVAL);
+    });
+  });
 });
-});
+
 
 
