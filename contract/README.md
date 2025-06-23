@@ -1,13 +1,20 @@
-# Sample Hardhat Project
+# สมาร์ตคอนแทรกต์ (contract/)
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+โฟลเดอร์นี้ประกอบด้วยโปรเจค Hardhat สำหรับพัฒนาและดีพลอยสมาร์ตคอนแทรกต์หลักของระบบ
 
-Try running some of the following tasks:
+## วิธีติดตั้งและทดสอบ
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+1. ติดตั้งแพ็กเกจ
+```bash
+npm install
 ```
+2. รันชุดทดสอบ
+```bash
+npx hardhat test
+```
+3. หากต้องการดีพลอยตัวอย่างคอนแทรกต์ไปยังเครือข่ายทดสอบ สามารถใช้คำสั่ง
+```bash
+npx hardhat run scripts/deploy.ts --network amoy
+```
+
+ไฟล์คอนแทรกต์หลักอยู่ใน `contracts/` และสคริปต์ใน `scripts/`
