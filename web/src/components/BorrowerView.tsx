@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useContractWrite, useContractRead, useContractEvent, usePublicClient } from 'wagmi';
 
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI, WALLET_URL, TOKEN_ADDRESS_LIST  } from '@/config/contract';
+import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
 import { parseEther, formatEther, isAddress, Address } from 'viem';
 
 
@@ -92,17 +93,17 @@ function BorrowerView() {
 
     // --- Contract Reads ---
 
-    const { data: loanCount, refetch: refetchLoanCount, isLoading: isLoadingLoanCount } = useContractRead({
+    const { data: loanRequestCount, refetch: refetchLoanRequestCount, isLoading: isLoadingLoanRequestCount } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'loanCount',
+        functionName: 'loanRequestCount',
         watch: true,
     });
 
     // Fetch user loan summaries
     useEffect(() => {
         const fetchUserLoanSummaries = async () => {
-            if (!loanCount || Number(loanCount) === 0 || !address || !publicClient) {
+            if (!loanRequestCount || Number(loanRequestCount) === 0 || !address || !publicClient) {
                 setUserLoans([]);
                 return;
             }
@@ -110,12 +111,12 @@ function BorrowerView() {
             // setMessage("Fetching your loan summaries..."); // Message handling can be more subtle
             const summaries: UserLoanSummary[] = [];
             try {
-                for (let i = 1; i <= Number(loanCount); i++) {
+                for (let i = 1; i <= Number(loanRequestCount); i++) {
                     try {
                         const loanData = await publicClient.readContract({
                             address: CONTRACT_ADDRESS as Address,
                             abi: CONTRACT_ABI, 
-                            functionName: 'loans',
+                            functionName: 'loanRequests',
                             args: [BigInt(i)],
                         }) as LoanDetailsFromMapping; 
 
@@ -156,13 +157,13 @@ function BorrowerView() {
         };
 
         fetchUserLoanSummaries();
-    }, [loanCount, address, publicClient]);
+    }, [loanRequestCount, address, publicClient]);
 
     // Fetch details for a selected loan
     const { data: loanDetailsDataFromMapping, refetch: fetchLoanDetails, isLoading: isLoadingLoanDetails, error: loanDetailsError } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'loans', 
+        functionName: 'loanRequests',
         args: selectedLoanId && /^\d+$/.test(selectedLoanId) ? [BigInt(selectedLoanId)] : undefined,
         enabled: !!selectedLoanId && /^\d+$/.test(selectedLoanId), 
         onSuccess: (data) => {
@@ -314,10 +315,18 @@ function BorrowerView() {
         },
     });
 
-    const { write: repayLoanWrite, isLoading: isRepayingLoan, error: repayLoanError } = useContractWrite({
+    const { data: deployedLoanAddress } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'repayLoan',
+        functionName: 'deployedLoans',
+        args: selectedLoanId && /^\d+$/.test(selectedLoanId) ? [BigInt(selectedLoanId)] : undefined,
+        enabled: !!selectedLoanId && /^\d+$/.test(selectedLoanId),
+    });
+
+    const { write: repayLoanWrite, isLoading: isRepayingLoan, error: repayLoanError } = useContractWrite({
+        address: deployedLoanAddress as Address,
+        abi: CREDIT_LOAN_ABI,
+        functionName: 'repay',
         onSuccess: (data) => {
             setMessage(`Loan ${selectedLoanId} repaid successfully! Tx: ${data.hash.slice(0, 10)}...`);
             if (fetchLoanDetails) fetchLoanDetails();
@@ -428,7 +437,15 @@ function BorrowerView() {
         }
         
         const interestBps = BigInt(Math.round(parseFloat(maxInterest) * 100));
-        requestLoanWrite({ args: [finalTokenAddress as Address, parseEther(amount), interestBps, dueDateInSeconds] });
+        requestLoanWrite({ args: [
+            finalTokenAddress as Address,
+            parseEther(amount),
+            interestBps,
+            1n,
+            dueDateInSeconds,
+            0n,
+            0n
+        ] });
     };
 
     const handleApplyForLoan = () => {
@@ -466,7 +483,7 @@ function BorrowerView() {
         if (repaid) { setMessage("Loan has already been repaid."); return; }
 
         setMessage("Ensure you have approved enough tokens for repayment. Proceeding with repay transaction...");
-        repayLoanWrite({ args: [BigInt(selectedLoanId)] });
+        repayLoanWrite({ args: [parseEther(amountToApprove || '0')] });
     };
 
     const handleApproveToken = () => {
@@ -640,7 +657,7 @@ function BorrowerView() {
             <h2 className="text-3xl font-semibold text-center text-sky-400">Borrower Dashboard</h2>
             <div className="text-center text-slate-400">
                 <p>Connected: <span className="font-mono text-sky-300">{address ? `${address.slice(0,6)}...${address.slice(-4)}` : "Not Connected"}</span></p>
-                <p>Total Loans on Platform: {isLoadingLoanCount ? 'Loading...' : (loanCount?.toString() || '0')}</p>
+                <p>Total Loan Requests on Platform: {isLoadingLoanRequestCount ? 'Loading...' : (loanRequestCount?.toString() || '0')}</p>
             </div>
 
             {message && (
