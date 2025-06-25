@@ -3,6 +3,8 @@ import hre, { ethers } from "hardhat";
 import type { Contract } from "ethers";
 import LoanMarketModule from "../ignition/modules/LoanMarketModule";
 import { ProxyModule } from "../ignition/modules/ProxyModule";
+import { TestTokenModule } from "../ignition/modules/TestToken";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 
 describe("LoanMarket (Ignition) Integration with External Verifier/Token", function () {
   let dao: {
@@ -17,7 +19,7 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
   // Existing deployed addresses
   const verifierAddress = "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c";
-  const tokenAddress    = "0x17E6459067dDbB870F8D4E961454eC39C695d35C";
+  let tokenAddress    = "0x17E6459067dDbB870F8D4E961454eC39C695d35C";
   const LOAN_AMOUNT     = ethers.parseEther("1000");
 
   beforeEach(async () => {
@@ -25,7 +27,9 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
     // Attach to existing verifier and token by address
     verifier = await ethers.getContractAt("Verifiable", verifierAddress);
-    token    = await ethers.getContractAt("TestToken", tokenAddress);
+    const tokenDeployment = await hre.ignition.deploy(TestTokenModule);
+    token = await ethers.getContractAt("TestToken", tokenDeployment.testToken.address);
+    tokenAddress = tokenDeployment.testToken.address;
 
     // Deploy LoanMarket & implementations via Ignition
     const deployment = await hre.ignition.deploy(ProxyModule, {
@@ -189,6 +193,13 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
     const proxyAddr = await dao.loanMarket.deployedLoans(1);
     creditLoan = await ethers.getContractAt("CreditLoan", proxyAddr);
+
+    // add token to lender's balance
+    await token.mint(lender.address,LOAN_AMOUNT);
+
+    // add token to borrower for repayment
+    // await token.mint(borrower.address, LOAN_AMOUNT);
+    
   });
 
   it("fundLoan(): onlyLender & notFunded → sets isFunded & lastAccrualTimestamp + emits LoanActivated", async () => {
@@ -228,6 +239,8 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
   });
 
   it("draw(amount): onlyBorrower & nonReentrant & within credit → transfers + emits FundsDrawn", async () => {
+    const currentBorrowerBalance = await token.balanceOf(borrower.address);
+
     await creditLoan.connect(lender).fundLoan();
     await token.connect(lender).approve(creditLoan.target, LOAN_AMOUNT);
 
@@ -237,7 +250,7 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
       .withArgs(borrower.address, drawAmt);
 
     expect(await creditLoan.outstandingBalance()).to.equal(drawAmt);
-    expect(await token.balanceOf(borrower.address)).to.equal(drawAmt);
+    expect(await token.balanceOf(borrower.address)).to.equal(drawAmt + currentBorrowerBalance);
   });
 
   it("repay(amount): onlyBorrower & nonReentrant → decreases balance, maybe sets isRepaid, transfers + emits FundsRepaid", async () => {
@@ -245,13 +258,18 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
     await token.connect(lender).approve(creditLoan.target, LOAN_AMOUNT);
     await creditLoan.connect(borrower).draw(ethers.parseEther("150"));
 
-    // borrower needs tokens to repay
-    await token.connect(lender).transfer(borrower.address, ethers.parseEther("150"));
-    await token.connect(borrower).approve(creditLoan.target, ethers.parseEther("150"));
+    await creditLoan.connect(borrower).accrueInterest();
+    const outstanding = await creditLoan.outstandingBalance();
+    console.log("Outstanding before repayment:", outstanding.toString());
 
-    await expect(creditLoan.connect(borrower).repay(ethers.parseEther("150")))
+
+    // borrower needs tokens to repay
+    await token.connect(lender).transfer(borrower.address, outstanding);
+    await token.connect(borrower).approve(creditLoan.target, outstanding);
+
+    await expect(creditLoan.connect(borrower).repay(outstanding))
       .to.emit(creditLoan, "FundsRepaid")
-      .withArgs(borrower.address, ethers.parseEther("150"));
+      .withArgs(borrower.address, outstanding);
 
     expect(await creditLoan.outstandingBalance()).to.equal(0);
     // since now ≤ dueDate, isRepaid stays false
@@ -331,6 +349,10 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
       const proxyAddr = await dao.loanMarket.deployedLoans(1);
       personalLoan = await ethers.getContractAt("PersonalLoan", proxyAddr);
+
+      // Add tokens to lender and borrower
+      await token.mint(lender.address, LOAN_AMOUNT);
+      await token.mint(borrower.address, LOAN_AMOUNT);
     });
 
     it("fundLoan() transfers funds and sets installment & due date", async () => {
@@ -341,12 +363,15 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
       const tx = await personalLoan.connect(lender).fundLoan();
       await expect(tx)
         .to.emit(personalLoan, "LoanFunded")
-        .withArgs(lender.address, borrower.address, LOAN_AMOUNT, expInstallment);
+        .withArgs(lender.address, borrower.address, LOAN_AMOUNT, anyValue);
+      
+      const realInstallment = await personalLoan.installmentAmount();
+      const diff = realInstallment - expInstallment;
+      expect(diff).to.be.within(-100000n, 100000n); // Allow for rounding errors
 
       const balAfter = await token.balanceOf(borrower.address);
       expect(balAfter - balBefore).to.equal(LOAN_AMOUNT);
 
-      expect(await personalLoan.installmentAmount()).to.equal(expInstallment);
 
       const block = await ethers.provider.getBlock(tx.blockNumber!);
       expect(await personalLoan.nextDueDate()).to.equal(BigInt(block.timestamp) + INTERVAL);

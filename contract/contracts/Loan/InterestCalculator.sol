@@ -30,6 +30,8 @@ library InterestCalculator {
         uint256 interestBps,
         uint256 timeElapsed
     ) internal pure returns (uint256) {
+        // Round timeElapsed to days to avoid precision issues
+        timeElapsed = roundToDay(timeElapsed);
         return (outstandingBalance * interestBps * timeElapsed) / (BPS_DIVISOR * SECONDS_IN_YEAR);
     }
 
@@ -78,5 +80,9 @@ library InterestCalculator {
             exponent /= 2;
         }
         return result;
+    }
+
+    function roundToDay(uint256 timestamp) public pure returns (uint256) {
+        return (timestamp / 1 days) * 1 days;
     }
 }
