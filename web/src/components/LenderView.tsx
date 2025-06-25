@@ -327,7 +327,7 @@ function LenderView() {
     const { write: submitOfferWrite, isLoading: isSubmittingOffer } = useContractWrite({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'reviewApplicationAndSubmitOffer',
+        functionName: 'submitOffer',
         onSuccess: (data) => {
             setMessage(`Offer for loan ${loanIdToReview} submitted! Tx: ${data.hash.slice(0, 10)}...`);
             if (fetchLoanDetailsForLender) fetchLoanDetailsForLender();
@@ -336,30 +336,6 @@ function LenderView() {
         onError: (error) => setMessage(`Submit Offer Error: ${error.message}`),
     });
 
-    const { write: rejectApplicationWrite, isLoading: isRejectingApplication } = useContractWrite({
-        address: CONTRACT_ADDRESS as Address,
-        abi: CONTRACT_ABI,
-        functionName: 'reviewApplicationAndReject',
-        onSuccess: (data) => {
-            setMessage(`Application for loan ${loanIdToReview} rejected. Tx: ${data.hash.slice(0, 10)}...`);
-            if (fetchLoanDetailsForLender) fetchLoanDetailsForLender();
-            fetchReviewableApplications();
-        },
-        onError: (error) => setMessage(`Reject Application Error: ${error.message}`),
-    });
-
-    const { write: fundLoanWrite, isLoading: isFundingLoan } = useContractWrite({
-        address: CONTRACT_ADDRESS as Address,
-        abi: CONTRACT_ABI,
-        functionName: 'fundLoan',
-        onSuccess: (data) => {
-            setMessage(`Loan ${loanIdToFund} funded successfully! Tx: ${data.hash.slice(0, 10)}...`);
-            if (fetchLoanDetailsForLender) fetchLoanDetailsForLender();
-            fetchFundableLoans();
-            fetchReviewableApplications();
-        },
-        onError: (error) => setMessage(`Fund Loan Error: ${error.message}`),
-    });
 
     const { write: approveTokenWriteL, isLoading: isApprovingTokenL } = useContractWrite({
         abi: ERC20_ABI,
@@ -495,36 +471,20 @@ function LenderView() {
             args: [
                 BigInt(loanIdToReview),
                 parseEther(amountOffer),
+                interestBps,
                 paybackTimestamp,
-                interestBps
+                0n,
+                0n
             ]
         });
     };
 
     const handleRejectApplication = () => {
-        if (!loanIdToReview || !/^\d+$/.test(loanIdToReview)) { setMessage("Valid Loan ID from the list must be selected to reject."); return; }
-        rejectApplicationWrite({ args: [BigInt(loanIdToReview)] });
+        setMessage('Rejecting applications is not supported with the new contract.');
     };
 
     const handleFundLoan = () => {
-        if (!loanIdToFund || !/^\d+$/.test(loanIdToFund)) { setMessage("Valid Loan ID from the fundable list must be selected."); return; }
-        if (!loanDetailsForAction) { setMessage("Loan details not loaded. Please select a loan from the fundable list."); return; }
-        
-        const selectedLenderAddress = typeof loanDetailsForAction[5] === 'string' ? loanDetailsForAction[5].toLowerCase() : '';
-        if (selectedLenderAddress !== address?.toLowerCase()) {
-             setMessage("You are not the selected lender for this loan.");
-             return;
-        }
-        if (loanDetailsForAction[9]) {
-             setMessage("This loan has already been funded.");
-             return;
-        }
-         if (loanDetailsForAction[10]) {
-             setMessage("This loan has already been repaid.");
-             return;
-        }
-
-        fundLoanWrite({ args: [BigInt(loanIdToFund)] });
+        setMessage('Funding loans is handled directly on the deployed loan contract.');
     };
 
     const handleApproveTokenL = () => {

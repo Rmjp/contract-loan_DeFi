@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useContractWrite, useContractRead, useContractEvent, usePublicClient } from 'wagmi';
 
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI, WALLET_URL, TOKEN_ADDRESS_LIST  } from '@/config/contract';
+import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
 import { parseEther, formatEther, isAddress, Address } from 'viem';
 
 
@@ -314,10 +315,18 @@ function BorrowerView() {
         },
     });
 
-    const { write: repayLoanWrite, isLoading: isRepayingLoan, error: repayLoanError } = useContractWrite({
+    const { data: deployedLoanAddress } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'repayLoan',
+        functionName: 'deployedLoans',
+        args: selectedLoanId && /^\d+$/.test(selectedLoanId) ? [BigInt(selectedLoanId)] : undefined,
+        enabled: !!selectedLoanId && /^\d+$/.test(selectedLoanId),
+    });
+
+    const { write: repayLoanWrite, isLoading: isRepayingLoan, error: repayLoanError } = useContractWrite({
+        address: deployedLoanAddress as Address,
+        abi: CREDIT_LOAN_ABI,
+        functionName: 'repay',
         onSuccess: (data) => {
             setMessage(`Loan ${selectedLoanId} repaid successfully! Tx: ${data.hash.slice(0, 10)}...`);
             if (fetchLoanDetails) fetchLoanDetails();
@@ -428,7 +437,15 @@ function BorrowerView() {
         }
         
         const interestBps = BigInt(Math.round(parseFloat(maxInterest) * 100));
-        requestLoanWrite({ args: [finalTokenAddress as Address, parseEther(amount), interestBps, dueDateInSeconds] });
+        requestLoanWrite({ args: [
+            finalTokenAddress as Address,
+            parseEther(amount),
+            interestBps,
+            1n,
+            dueDateInSeconds,
+            0n,
+            0n
+        ] });
     };
 
     const handleApplyForLoan = () => {
@@ -466,7 +483,7 @@ function BorrowerView() {
         if (repaid) { setMessage("Loan has already been repaid."); return; }
 
         setMessage("Ensure you have approved enough tokens for repayment. Proceeding with repay transaction...");
-        repayLoanWrite({ args: [BigInt(selectedLoanId)] });
+        repayLoanWrite({ args: [parseEther(amountToApprove || '0')] });
     };
 
     const handleApproveToken = () => {
