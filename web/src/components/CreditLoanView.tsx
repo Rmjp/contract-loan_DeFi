@@ -9,6 +9,7 @@ export default function CreditLoanView() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const [loanId, setLoanId] = useState('');
+  const [loanIdList, setLoanIdList] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'borrower' | 'lender'>('borrower');
   const [drawAmt, setDrawAmt] = useState('');
   const [repayAmt, setRepayAmt] = useState('');
@@ -61,6 +62,7 @@ export default function CreditLoanView() {
   });
 
   useEffect(() => {
+    const loanIdList: string[] = [];
     const findLoan = async () => {
       if (!address || loanRequestCount === undefined || !publicClient) return;
       for (let i = 1; i <= Number(loanRequestCount); i++) {
@@ -79,8 +81,9 @@ export default function CreditLoanView() {
               functionName: 'state',
             }) as any[];
             const [b, l] = state;
+            console.log(`Loan ID ${i}: Borrower: ${b.toLowerCase()}, Lender: ${l.toLowerCase()}`, address.toLowerCase());
             if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
-              setLoanId(i.toString());
+              loanIdList.push(i.toString());
               setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
               return;
             }
@@ -89,17 +92,24 @@ export default function CreditLoanView() {
       }
     };
     findLoan();
+    setLoanIdList(loanIdList);
   }, [address, loanRequestCount, publicClient]);
 
   return (
     <div className="space-y-4">
       <h3 className="text-xl font-semibold text-purple-300">Credit Loan Interaction</h3>
-      <input
-        className="border p-2 rounded w-full bg-slate-700 text-sky-200"
-        placeholder="Loan ID"
-        value={loanId}
-        onChange={e => setLoanId(e.target.value)}
-      />
+      <div className="flex space-x-2">
+        <select
+          className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+          value={loanId}
+          onChange={e => setLoanId(e.target.value)}
+        >
+          <option value="">Select Loan ID</option>
+          {loanIdList.map(id => (
+            <option key={id} value={id}>{id}</option>
+          ))}
+        </select>
+      </div>
       {loanAddress && (
         <p className="text-sm text-slate-400 break-all">Contract: {loanAddress as string}</p>
       )}

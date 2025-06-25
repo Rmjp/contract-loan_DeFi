@@ -178,7 +178,7 @@ function LenderView() {
                             args: [BigInt(i)],
                         }) as LoanDataFromMapping;
                         
-                        if (loanData) {
+                        if (loanData && loanData[0] != 0n) {
                             apps.push({
                                 loanId: i.toString(),
                                 borrower: loanData[0],
