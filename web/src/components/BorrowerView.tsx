@@ -7,6 +7,7 @@ import { useAccount, useContractWrite, useContractRead, useContractEvent, usePub
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI, WALLET_URL, TOKEN_ADDRESS_LIST  } from '@/config/contract';
 import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
 import { parseEther, formatEther, isAddress, Address } from 'viem';
+import { formatDateFromSeconds } from '@/utils/formatDate';
 
 
 const InfoIcon = () => (
@@ -15,18 +16,16 @@ const InfoIcon = () => (
     </svg>
 );
 
+// Updated to match the new LoanMarket.loanRequests return format
 type LoanDetailsFromMapping = [
     Address, // 0: borrower
     Address, // 1: token
     bigint,  // 2: amountRequested
     bigint,  // 3: maxInterestBps
-    bigint,  // 4: requestedDueDate
-    Address | bigint, // 5: selectedLender
-    bigint,  // 6: amountAgreed
-    bigint,  // 7: interestBpsAgreed
-    bigint,  // 8: agreedDueDate
-    boolean, // 9: funded
-    boolean  // 10: repaid
+    bigint,  // 4: loanType
+    bigint,  // 5: requestedPayments
+    bigint,  // 6: requestedPaymentInterval
+    bigint   // 7: requestedDueDate
 ];
 
 
@@ -122,22 +121,21 @@ function BorrowerView() {
 
                         if (loanData && loanData[0].toLowerCase() === address.toLowerCase()) {
                             const [
-                                borrower, token, amountReq, , reqDueDate, 
-                                selectedLenderRaw, , , , fundedStatus, repaidStatus 
+                                borrower,
+                                token,
+                                amountReq,
+                                , // maxInterestBps (unused)
+                                , // loanType
+                                , // requestedPayments
+                                , // requestedPaymentInterval
+                                reqDueDate
                             ] = loanData;
-
-                            let status = "Requested";
-                            if (repaidStatus) status = "Repaid";
-                            else if (fundedStatus) status = "Funded";
-                            else if (!isZeroAddressValue(selectedLenderRaw)) { // Check if selectedLender is not zero
-                                status = "Offer Accepted";
-                            }
 
                             summaries.push({
                                 id: i.toString(),
                                 amountRequested: formatEther(amountReq),
-                                requestedDueDate: new Date(Number(reqDueDate) * 1000).toLocaleDateString(),
-                                status: status,
+                                requestedDueDate: formatDateFromSeconds(reqDueDate),
+                                status: "Requested",
                                 tokenAddress: token,
                                 rawBorrowerAddress: borrower,
                             });
@@ -171,24 +169,11 @@ function BorrowerView() {
             if (typedData && typedData[0] && address && typedData[0].toLowerCase() === address.toLowerCase()) {
                 setCurrentLoanDetails(typedData);
                 setMessage(`Details loaded for Your Loan ID: ${selectedLoanId}`);
-                if (typedData[1] && isAddress(typedData[1])) { 
-                    setTokenToApprove(typedData[1]); // Set token for approval section
+                if (typedData[1] && isAddress(typedData[1])) {
+                    setTokenToApprove(typedData[1]);
                 }
-                // Automatically set amountToApprove if loan is funded and not repaid (for repayment context)
-                if (typedData[9] && !typedData[10] && typedData[6]) { // funded, not repaid, amountAgreed exists
-                    // Calculate total repayment: amountAgreed + (amountAgreed * interestBpsAgreed / 10000)
-                    const principal = typedData[6];
-                    const interestBps = typedData[7];
-                    const interestAmount = (principal * interestBps) / 10000n; // 10000 because interestBps is out of 10000 (e.g. 500 for 5%)
-                    const totalRepayment = principal + interestAmount;
-                    setAmountToApprove(formatEther(totalRepayment));
-                } else {
-                    // Clear if not in repayment context or details missing
-                   // setAmountToApprove(''); // Or keep it if user manually entered
-                }
-
             } else if (typedData && typedData[0]) {
-                setCurrentLoanDetails(null); 
+                setCurrentLoanDetails(null);
                 setMessage(`Details for Loan ID ${selectedLoanId} loaded, but it does not belong to you.`);
                 setTokenToApprove(''); setAmountToApprove('');
             } else {
@@ -509,8 +494,14 @@ function BorrowerView() {
             return;
         }
         setMessage(`Refreshing data for Loan ID: ${selectedLoanId}...`);
-        if (fetchLoanDetails) fetchLoanDetails(); 
-        if (refetchBorrowerAllowance) refetchBorrowerAllowance(); // Also refresh allowance
+        if (fetchLoanDetails) fetchLoanDetails();
+        if (
+            refetchBorrowerAllowance &&
+            address &&
+            tokenToApprove &&
+            isAddress(tokenToApprove)
+        )
+            refetchBorrowerAllowance(); // Also refresh allowance only when params are valid
     };
 
     const handleSendCredential = useCallback(async (requestId: string) => {
@@ -567,11 +558,18 @@ function BorrowerView() {
             return <p className="text-orange-400 mt-2">Loan ID {selectedLoanId} does not belong to your connected address.</p>;
         }
 
-        const [borrower, token, amountRequested, maxInterestBps, requestedDueDate, selectedLender, amountAgreed, interestBpsAgreed, agreedDueDate, funded, repaid] = loanData;
-        
-        const statusText = funded
-            ? (repaid ? <span className="text-green-400 font-semibold">Repaid</span> : <span className="text-sky-400 font-semibold">Funded (Awaiting Repayment)</span>)
-            : (!isZeroAddressValue(selectedLender) ? <span className="text-purple-400 font-semibold">Offer Accepted (Pending Funding)</span> : <span className="text-yellow-400 font-semibold">Offer Stage / Pending Application</span>);
+        const [
+            borrower,
+            token,
+            amountRequested,
+            maxInterestBps,
+            loanType,
+            requestedPayments,
+            requestedPaymentInterval,
+            requestedDueDate
+        ] = loanData;
+
+        const statusText = <span className="text-yellow-400 font-semibold">Requested</span>;
 
         return (
             <div className="mt-4 p-4 bg-slate-700 rounded-lg shadow space-y-2 text-sm">
@@ -581,16 +579,9 @@ function BorrowerView() {
                 <p><strong>Token:</strong> <span className="font-mono text-xs break-all">{token}</span></p>
                 <p><strong>Amount Requested:</strong> {formatEther(amountRequested)} Tokens</p>
                 <p><strong>Your Max Interest:</strong> {Number(maxInterestBps) / 100}%</p>
-                <p><strong>Requested Due Date:</strong> {new Date(Number(requestedDueDate) * 1000).toLocaleDateString()}</p>
+                <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
                 
-                {!isZeroAddressValue(selectedLender) && (
-                    <div className="pt-2 mt-2 border-t border-slate-600">
-                        <p><strong>Selected Lender:</strong> <span className="font-mono text-xs break-all">{typeof selectedLender === 'bigint' ? (selectedLender === 0n ? 'None' : selectedLender.toString()) : selectedLender}</span></p>
-                        <p><strong>Agreed Amount:</strong> {formatEther(amountAgreed)} Tokens</p>
-                        <p><strong>Agreed Interest:</strong> {Number(interestBpsAgreed) / 100}%</p>
-                        <p><strong>Agreed Due Date:</strong> {new Date(Number(agreedDueDate) * 1000).toLocaleDateString()}</p>
-                    </div>
-                )}
+                {/* Additional loan details (selected lender, funding status) are not available from loanRequests */}
             </div>
         );
     };
@@ -609,7 +600,7 @@ function BorrowerView() {
                         <p>Lender: <span className="font-mono text-xs break-all">{offer.lender}</span></p>
                         <p>Amount Offered: {formatEther(offer.amountOffered)} Tokens</p>
                         <p>Interest Offered: {Number(offer.interestBpsOffered) / 100}%</p>
-                        <p>Payback Date Offered: {new Date(Number(offer.paybackTimeOffered) * 1000).toLocaleDateString()}</p>
+                        <p>Payback Date Offered: {formatDateFromSeconds(offer.paybackTimeOffered)}</p>
                         <button
                             onClick={() => handleAcceptOffer(index)}
                             disabled={isAcceptingOffer || !canAcceptOffer} 
@@ -631,11 +622,9 @@ function BorrowerView() {
 
     const isUsersSelectedLoan = !!currentLoanDetails && !!address && currentLoanDetails[0].toLowerCase() === address.toLowerCase();
     // Can accept offer if it's user's loan, no lender selected yet (still in offer stage), and not funded
-    const canAcceptOffer = isUsersSelectedLoan && currentLoanDetails && isZeroAddressValue(currentLoanDetails[5]) && !currentLoanDetails[9];
-    // Can repay if it's user's loan, it's funded, and not yet repaid
-    const canRepay = isUsersSelectedLoan && currentLoanDetails && currentLoanDetails[9] && !currentLoanDetails[10]; 
-    // Can apply to a lender if it's user's loan, not funded, and no offer has been accepted yet (selectedLender is zero)
-    const canApply = isUsersSelectedLoan && currentLoanDetails && !currentLoanDetails[9] && isZeroAddressValue(currentLoanDetails[5]);
+    const canAcceptOffer = isUsersSelectedLoan;
+    const canRepay = false; // Repayment status not available from loanRequests
+    const canApply = isUsersSelectedLoan;
 
 
     return (
