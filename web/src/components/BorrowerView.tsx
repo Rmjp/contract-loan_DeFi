@@ -249,6 +249,26 @@ function BorrowerView() {
         }
     });
 
+    // Fetch all offers for a selected loan when requested
+    const {
+        refetch: fetchOffers,
+        isLoading: isLoadingOffers,
+        error: offersError,
+    } = useContractRead({
+        address: CONTRACT_ADDRESS as Address,
+        abi: CONTRACT_ABI,
+        functionName: 'getOffers',
+        args: selectedLoanId && /^\d+$/.test(selectedLoanId) ? [BigInt(selectedLoanId)] : undefined,
+        enabled: false,
+        onSuccess: (data) => {
+            setOffersForLoan(data as Offer[]);
+            setMessage(`Loaded ${ (data as Offer[]).length } offer(s) for loan ${selectedLoanId}.`);
+        },
+        onError: (error) => {
+            setMessage(`Error fetching offers: ${error.message.substring(0,100)}...`);
+        },
+    });
+
 
     // --- Contract Writes ---
     const { write: requestLoanWrite, isLoading: isRequestingLoan, error: requestLoanError } = useContractWrite({
@@ -502,6 +522,14 @@ function BorrowerView() {
             isAddress(tokenToApprove)
         )
             refetchBorrowerAllowance(); // Also refresh allowance only when params are valid
+    };
+
+    const handleGetOffers = () => {
+        if (!selectedLoanId || !/^\d+$/.test(selectedLoanId)) {
+            setMessage("A valid Loan ID must be selected to fetch offers.");
+            return;
+        }
+        if (fetchOffers) fetchOffers();
     };
 
     const handleSendCredential = useCallback(async (requestId: string) => {
@@ -811,10 +839,14 @@ function BorrowerView() {
                     )}
 
                     {/* Section 3b: View & Accept Offers */}
-                     {canAcceptOffer && (
+                    {canAcceptOffer && (
                         <div className={cardClass}>
                             <h3 className="text-xl font-semibold mb-4 text-sky-400">3b. View & Accept Offers (for Loan ID: {selectedLoanId})</h3>
+                            <button onClick={handleGetOffers} disabled={isLoadingOffers} className={`${buttonClass(isLoadingOffers)} mb-4`}>
+                                {isLoadingOffers ? 'Fetching Offers...' : 'Load Offers'}
+                            </button>
                             {renderOffersList(offersForLoan)}
+                            {offersError && <p className="text-red-400 mt-2">Unable to fetch offers.</p>}
                         </div>
                     )}
                      {/* Message if loan is not in a state for applying or accepting offers */}
