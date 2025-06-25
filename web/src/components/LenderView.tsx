@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useContractWrite, useContractRead, useContractEvent, usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI } from '@/config/contract'; // Ensure ERC20_ABI has 'allowance'
 import { parseEther, formatEther, isAddress, Address } from 'viem';
+import { formatDateFromSeconds } from '@/utils/formatDate';
 
 const InfoIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline-block ml-1 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
@@ -13,18 +14,16 @@ const InfoIcon = () => (
 );
 
 // Type for the raw loan data fetched from the public 'loans' mapping
+// Updated to match the new LoanMarket.loanRequests return format
 type LoanDataFromMapping = [
-    Address,        // 0: borrower
-    Address,        // 1: token
-    bigint,         // 2: amountRequested
-    bigint,         // 3: maxInterestBps
-    bigint,         // 4: requestedDueDate
-    Address | bigint, // 5: selectedLender (can be 0n if not selected, or address)
-    bigint,         // 6: amountAgreed
-    bigint,         // 7: interestBpsAgreed
-    bigint,         // 8: agreedDueDate
-    boolean,        // 9: funded
-    boolean         // 10: repaid
+    Address, // 0: borrower
+    Address, // 1: token
+    bigint,  // 2: amountRequested
+    bigint,  // 3: maxInterestBps
+    bigint,  // 4: loanType
+    bigint,  // 5: requestedPayments
+    bigint,  // 6: requestedPaymentInterval
+    bigint   // 7: requestedDueDate
 ];
 
 // Summary for loans that a lender can review
@@ -179,13 +178,13 @@ function LenderView() {
                             args: [BigInt(i)],
                         }) as LoanDataFromMapping;
                         
-                        if (loanData && !loanData[9] && isZeroAddressValue(loanData[5]) && !loanData[10]) {
+                        if (loanData) {
                             apps.push({
                                 loanId: i.toString(),
                                 borrower: loanData[0],
                                 amountRequested: formatEther(loanData[2]),
                                 tokenAddress: loanData[1],
-                                requestedDueDate: new Date(Number(loanData[4]) * 1000).toLocaleDateString(),
+                                requestedDueDate: formatDateFromSeconds(loanData[7]),
                             });
                         }
                     }
@@ -227,18 +226,14 @@ function LenderView() {
                         args: [BigInt(i)],
                     }) as LoanDataFromMapping;
 
-                    if (loanData &&
-                        typeof loanData[5] === 'string' && loanData[5].toLowerCase() === address.toLowerCase() &&
-                        !loanData[9] &&
-                        !loanData[10]
-                    ) {
+                    if (loanData) {
                         loansToFund.push({
                             loanId: i.toString(),
                             borrower: loanData[0],
                             tokenAddress: loanData[1],
-                            amountAgreed: formatEther(loanData[6]),
-                            rawAmountAgreed: loanData[6],
-                            agreedDueDate: new Date(Number(loanData[8]) * 1000).toLocaleDateString(),
+                            amountAgreed: formatEther(loanData[2]),
+                            rawAmountAgreed: loanData[2],
+                            agreedDueDate: formatDateFromSeconds(loanData[7]),
                         });
                     }
                 } catch (error) {
@@ -277,7 +272,7 @@ function LenderView() {
 
                 if (loanIdToFund && BigInt(loanIdToFund) === currentDetailLoanId) {
                     if (loan[1] && isAddress(loan[1])) setTokenToApproveL(loan[1]);
-                    if (loan[6]) setAmountToApproveL(formatEther(loan[6]));
+                    setAmountToApproveL(formatEther(loan[2]));
                 } else if (loanIdToReview && BigInt(loanIdToReview) === currentDetailLoanId) {
                     if (loan[1] && isAddress(loan[1])) setTokenToApproveL(loan[1]);
                     setAmountToApproveL('');
@@ -287,7 +282,7 @@ function LenderView() {
                          setAmountToApproveL('');
                     } else if (loanIdToFund && loan[1] && isAddress(loan[1])) { // Fallback to fund if it's set
                          setTokenToApproveL(loan[1]);
-                         if (loan[6]) setAmountToApproveL(formatEther(loan[6]));
+                         setAmountToApproveL(formatEther(loan[2]));
                     } else { // Clear if no active selection context matches
                         setTokenToApproveL('');
                         setAmountToApproveL('');
@@ -579,8 +574,16 @@ function LenderView() {
             return <p className="text-slate-400 mt-2">Select a loan to view its details.</p>;
         }
         
-        const [borrower, token, amountRequested, maxInterestBps, requestedDueDate, selectedLenderRaw, amountAgreed, interestBpsAgreed, agreedDueDate, funded, repaid] = loan;
-        const selectedLender = typeof selectedLenderRaw === 'bigint' ? (selectedLenderRaw === 0n ? '0x0000000000000000000000000000000000000000' : selectedLenderRaw.toString()) : selectedLenderRaw;
+        const [
+            borrower,
+            token,
+            amountRequested,
+            maxInterestBps,
+            loanType,
+            requestedPayments,
+            requestedPaymentInterval,
+            requestedDueDate
+        ] = loan;
 
         return (
             <div className="mt-4 p-4 bg-slate-700 rounded-lg shadow space-y-2 text-sm">
@@ -589,22 +592,8 @@ function LenderView() {
                 <p><strong>Token:</strong> <span className="font-mono text-xs">{token}</span></p>
                 <p><strong>Amount Requested:</strong> {formatEther(amountRequested)} Tokens</p>
                 <p><strong>Borrower's Max Interest:</strong> {Number(maxInterestBps) / 100}%</p>
-                <p><strong>Requested Due Date:</strong> {new Date(Number(requestedDueDate) * 1000).toLocaleDateString()}</p>
-                
-                {!isZeroAddressValue(selectedLender) && (
-                    <>
-                        <p><strong>Selected Lender:</strong> <span className="font-mono text-xs">{selectedLender} {(typeof selectedLender === 'string' && selectedLender.toLowerCase()) === address?.toLowerCase() ? <span className="text-purple-300">(You)</span> : ""}</span></p>
-                        <p><strong>Amount Agreed:</strong> {formatEther(amountAgreed)} Tokens</p>
-                        <p><strong>Interest Agreed:</strong> {Number(interestBpsAgreed) / 100}%</p>
-                        <p><strong>Agreed Due Date:</strong> {new Date(Number(agreedDueDate) * 1000).toLocaleDateString()}</p>
-                    </>
-                )}
-
-                <p><strong>Status:</strong>
-                    {funded ? (<span className="text-green-400 font-semibold">Funded</span>)
-                           : (<span className="text-yellow-400 font-semibold">Not Funded</span>)}
-                    {repaid && <span className="text-green-400 font-semibold ml-2">(Repaid)</span>}
-                </p>
+                <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
+                {/* Additional loan details such as selected lender or funding status are not available from loanRequests */}
             </div>
         );
     };
@@ -623,10 +612,7 @@ function LenderView() {
         }
     };
 
-    const canFundSelectedLoan = !!loanIdToFund && !!loanDetailsForAction &&
-        typeof loanDetailsForAction[5] === 'string' && loanDetailsForAction[5].toLowerCase() === address?.toLowerCase() &&
-        !loanDetailsForAction[9] &&
-        !loanDetailsForAction[10];
+    const canFundSelectedLoan = !!loanIdToFund && !!loanDetailsForAction;
 
 
     return (
@@ -735,12 +721,7 @@ function LenderView() {
 
                     {loanIdToReview && renderLoanForActionCard(loanDetailsForAction, loanIdToReview)}
 
-                    {loanIdToReview && loanDetailsForAction &&
-                        !loanDetailsForAction[9] &&
-                        isZeroAddressValue(loanDetailsForAction[5]) &&
-                        !loanDetailsForAction[10] &&
-                        isLenderActuallyRegistered &&
-                        (
+                    {loanIdToReview && loanDetailsForAction && isLenderActuallyRegistered && (
                             <div className="mt-6 pt-4 border-t border-slate-700 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
@@ -769,9 +750,9 @@ function LenderView() {
                                 }
                             </div>
                         )}
-                        {loanIdToReview && loanDetailsForAction && (loanDetailsForAction[9] || !isZeroAddressValue(loanDetailsForAction[5]) || loanDetailsForAction[10]) &&
-                            <p className="text-sm text-slate-400 mt-4">This loan is either funded, repaid, or an offer is accepted. No further review actions.</p>
-                        }
+                        {loanIdToReview && loanDetailsForAction && (
+                            <p className="text-sm text-slate-400 mt-4">This loan may already have an accepted offer or be funded.</p>
+                        )}
                 </div>
             )}
 
@@ -878,13 +859,7 @@ function LenderView() {
                                 </button>
                             )}
                              {isLenderActuallyRegistered && loanIdToFund && loanDetailsForAction && !canFundSelectedLoan && (
-                                 <p className="text-sm text-slate-400 mt-2">
-                                     { loanDetailsForAction[9] ? "This loan is already funded." :
-                                       loanDetailsForAction[10] ? "This loan has been repaid." :
-                                       (typeof loanDetailsForAction[5] !== 'string' || loanDetailsForAction[5].toLowerCase() !== address?.toLowerCase()) ? "You are not the selected lender." :
-                                       "Cannot fund this loan. Ensure offer accepted, not funded/repaid."
-                                     }
-                                 </p>
+                                 <p className="text-sm text-slate-400 mt-2">Cannot fund this loan at the moment.</p>
                              )}
                         </div>
                     </div>
