@@ -1,14 +1,24 @@
 'use client';
-import { useState } from 'react';
-import { useContractRead, useContractWrite } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useContractRead, useContractWrite, useAccount, usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/config/contract';
 import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
 import { parseEther, Address } from 'viem';
 
 export default function CreditLoanView() {
+  const { address } = useAccount();
+  const publicClient = usePublicClient();
   const [loanId, setLoanId] = useState('');
+  const [activeTab, setActiveTab] = useState<'borrower' | 'lender'>('borrower');
   const [drawAmt, setDrawAmt] = useState('');
   const [repayAmt, setRepayAmt] = useState('');
+
+  const { data: loanRequestCount } = useContractRead({
+    address: CONTRACT_ADDRESS as Address,
+    abi: CONTRACT_ABI,
+    functionName: 'loanRequestCount',
+    watch: false,
+  });
 
   const { data: loanAddress } = useContractRead({
     address: CONTRACT_ADDRESS as Address,
@@ -44,6 +54,43 @@ export default function CreditLoanView() {
     functionName: 'repay',
   });
 
+  const { write: fundLoanWrite } = useContractWrite({
+    address: loanAddress as Address,
+    abi: CREDIT_LOAN_ABI,
+    functionName: 'fundLoan',
+  });
+
+  useEffect(() => {
+    const findLoan = async () => {
+      if (!address || loanRequestCount === undefined || !publicClient) return;
+      for (let i = 1; i <= Number(loanRequestCount); i++) {
+        try {
+          const addr = await publicClient.readContract({
+            address: CONTRACT_ADDRESS as Address,
+            abi: CONTRACT_ABI,
+            functionName: 'deployedLoans',
+            args: [BigInt(i)],
+          });
+          if (!addr || addr === '0x0000000000000000000000000000000000000000') continue;
+          try {
+            const state = await publicClient.readContract({
+              address: addr as Address,
+              abi: CREDIT_LOAN_ABI,
+              functionName: 'state',
+            }) as any[];
+            const [b, l] = state;
+            if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
+              setLoanId(i.toString());
+              setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
+              return;
+            }
+          } catch { /* ignore non credit loans */ }
+        } catch {}
+      }
+    };
+    findLoan();
+  }, [address, loanRequestCount, publicClient]);
+
   return (
     <div className="space-y-4">
       <h3 className="text-xl font-semibold text-purple-300">Credit Loan Interaction</h3>
@@ -62,32 +109,48 @@ export default function CreditLoanView() {
       {available !== undefined && (
         <p className="text-sm text-sky-300">Available Credit: {available.toString()}</p>
       )}
-      <div className="space-y-2">
-        <input
-          className="border p-2 rounded w-full bg-slate-700 text-sky-200"
-          placeholder="Amount to draw"
-          value={drawAmt}
-          onChange={e => setDrawAmt(e.target.value)}
-        />
-        <button
-          onClick={() => drawWrite({ args: [parseEther(drawAmt || '0')] })}
-          className="bg-purple-600 text-white px-4 py-2 rounded"
-          disabled={!loanAddress || !drawAmt}
-        >Draw</button>
+      <div className="flex space-x-4">
+        <button className={`px-4 py-2 rounded ${activeTab === 'borrower' ? 'bg-purple-600 text-white' : 'bg-slate-600 text-slate-200'}`} onClick={() => setActiveTab('borrower')}>Borrower</button>
+        <button className={`px-4 py-2 rounded ${activeTab === 'lender' ? 'bg-purple-600 text-white' : 'bg-slate-600 text-slate-200'}`} onClick={() => setActiveTab('lender')}>Lender</button>
       </div>
-      <div className="space-y-2">
-        <input
-          className="border p-2 rounded w-full bg-slate-700 text-sky-200"
-          placeholder="Amount to repay"
-          value={repayAmt}
-          onChange={e => setRepayAmt(e.target.value)}
-        />
-        <button
-          onClick={() => repayWrite({ args: [parseEther(repayAmt || '0')] })}
-          className="bg-sky-600 text-white px-4 py-2 rounded"
-          disabled={!loanAddress || !repayAmt}
-        >Repay</button>
-      </div>
+      {activeTab === 'borrower' ? (
+        <>
+          <div className="space-y-2">
+            <input
+              className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+              placeholder="Amount to draw"
+              value={drawAmt}
+              onChange={e => setDrawAmt(e.target.value)}
+            />
+            <button
+              onClick={() => drawWrite({ args: [parseEther(drawAmt || '0')] })}
+              className="bg-purple-600 text-white px-4 py-2 rounded"
+              disabled={!loanAddress || !drawAmt}
+            >Draw</button>
+          </div>
+          <div className="space-y-2">
+            <input
+              className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+              placeholder="Amount to repay"
+              value={repayAmt}
+              onChange={e => setRepayAmt(e.target.value)}
+            />
+            <button
+              onClick={() => repayWrite({ args: [parseEther(repayAmt || '0')] })}
+              className="bg-sky-600 text-white px-4 py-2 rounded"
+              disabled={!loanAddress || !repayAmt}
+            >Repay</button>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          <button
+            onClick={() => fundLoanWrite()}
+            className="bg-purple-600 text-white px-4 py-2 rounded"
+            disabled={!loanAddress}
+          >Fund Loan</button>
+        </div>
+      )}
     </div>
   );
 }
