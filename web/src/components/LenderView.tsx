@@ -116,10 +116,10 @@ function LenderView() {
         }
     });
     
-    const { data: loanCount, isLoading: isLoadingLoanCount, refetch: refetchLoanCount } = useContractRead({
+    const { data: loanRequestCount, isLoading: isLoadingLoanRequestCount, refetch: refetchLoanRequestCount } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'loanCount',
+        functionName: 'loanRequestCount',
         watch: true,
     });
 
@@ -152,7 +152,7 @@ function LenderView() {
 
 
     const fetchReviewableApplications = useCallback(async () => {
-        if (!isLenderActuallyRegistered || !address || !publicClient || typeof loanCount === 'undefined') {
+        if (!isLenderActuallyRegistered || !address || !publicClient || typeof loanRequestCount === 'undefined') {
             setReviewableApplications([]);
             return;
         }
@@ -160,7 +160,7 @@ function LenderView() {
         // setMessage("Fetching loan applications for your review..."); // Message handled by effect
         const apps: ReviewableLoanApplicationSummary[] = [];
         try {
-            for (let i = 1; i <= Number(loanCount); i++) {
+            for (let i = 1; i <= Number(loanRequestCount); i++) {
                 try {
                     const hasApplication = await publicClient.readContract({
                         address: CONTRACT_ADDRESS as Address,
@@ -173,7 +173,7 @@ function LenderView() {
                         const loanData = await publicClient.readContract({
                             address: CONTRACT_ADDRESS as Address,
                             abi: CONTRACT_ABI,
-                            functionName: 'loans',
+                            functionName: 'loanRequests',
                             args: [BigInt(i)],
                         }) as LoanDataFromMapping;
                         
@@ -199,16 +199,16 @@ function LenderView() {
             setReviewableApplications([]);
         }
         setIsLoadingReviewableApps(false);
-    }, [isLenderActuallyRegistered, address, publicClient, loanCount]); // Removed setMessage
+    }, [isLenderActuallyRegistered, address, publicClient, loanRequestCount]); // Removed setMessage
 
     useEffect(() => {
-        if (isLenderActuallyRegistered && address && typeof loanCount !== 'undefined') {
+        if (isLenderActuallyRegistered && address && typeof loanRequestCount !== 'undefined') {
             fetchReviewableApplications();
         }
-    }, [fetchReviewableApplications, isLenderActuallyRegistered, address, loanCount]);
+    }, [fetchReviewableApplications, isLenderActuallyRegistered, address, loanRequestCount]);
 
     const fetchFundableLoans = useCallback(async () => {
-        if (!isLenderActuallyRegistered || !address || !publicClient || typeof loanCount === 'undefined') {
+        if (!isLenderActuallyRegistered || !address || !publicClient || typeof loanRequestCount === 'undefined') {
             setFundableLoans([]);
             return;
         }
@@ -216,12 +216,12 @@ function LenderView() {
         // setMessage("Fetching loans you can fund..."); // Message handled by effect
         const loansToFund: FundableLoanSummary[] = [];
         try {
-            for (let i = 1; i <= Number(loanCount); i++) {
+            for (let i = 1; i <= Number(loanRequestCount); i++) {
                 try {
                     const loanData = await publicClient.readContract({
                         address: CONTRACT_ADDRESS as Address,
                         abi: CONTRACT_ABI,
-                        functionName: 'loans',
+                        functionName: 'loanRequests',
                         args: [BigInt(i)],
                     }) as LoanDataFromMapping;
 
@@ -251,20 +251,20 @@ function LenderView() {
             setFundableLoans([]);
         }
         setIsLoadingFundableLoans(false);
-    }, [isLenderActuallyRegistered, address, publicClient, loanCount]); // Removed setMessage
+    }, [isLenderActuallyRegistered, address, publicClient, loanRequestCount]); // Removed setMessage
     
     useEffect(() => {
-        if (isLenderActuallyRegistered && address && typeof loanCount !== 'undefined') {
+        if (isLenderActuallyRegistered && address && typeof loanRequestCount !== 'undefined') {
             fetchFundableLoans();
         }
-    }, [fetchFundableLoans, isLenderActuallyRegistered, address, loanCount]);
+    }, [fetchFundableLoans, isLenderActuallyRegistered, address, loanRequestCount]);
 
     const activeLoanIdForDetails = loanIdToFund || loanIdToReview;
 
     const { data: loanDetailsDataLender, refetch: fetchLoanDetailsForLender, isLoading: isLoadingLoanDetailsLender } = useContractRead({
         address: CONTRACT_ADDRESS as Address,
         abi: CONTRACT_ABI,
-        functionName: 'loans',
+        functionName: 'loanRequests',
         args: activeLoanIdForDetails && /^\d+$/.test(activeLoanIdForDetails) ? [BigInt(activeLoanIdForDetails)] : undefined,
         enabled: !!activeLoanIdForDetails && /^\d+$/.test(activeLoanIdForDetails),
         onSuccess: (data) => {
