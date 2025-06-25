@@ -6,6 +6,7 @@ import "@openzeppelin/hardhat-upgrades";
 import '@typechain/hardhat'
 import '@nomicfoundation/hardhat-ethers'
 import '@nomicfoundation/hardhat-chai-matchers'
+import "@nomicfoundation/hardhat-verify";
 
 dotenv.config();
 
@@ -20,7 +21,8 @@ const config: HardhatUserConfig = {
         },
       },
       forking: {
-        url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
+        // url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
+        url: "https://rpc-amoy.polygon.technology/",
         // (Optional) Pin a block number to run tests on a deterministic state
         blockNumber: 22524270
       },
@@ -73,6 +75,26 @@ const config: HardhatUserConfig = {
     //   },
     // }
   },
+  etherscan: {
+  apiKey: {
+    amoy: process.env.POLYGONSCAN_API_KEY || "",
+  },
+  customChains: [
+    {
+      network: "amoy",
+      chainId: 80002,
+      urls: {
+        apiURL: "https://api-amoy.polygonscan.com/api",
+        browserURL: "https://amoy.polygonscan.com"
+      }
+    }
+  ]
+},
+sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true
+  }
 };
 
 export default config;

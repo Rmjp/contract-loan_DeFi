@@ -236,19 +236,6 @@ function BorrowerView() {
         }
     }, [lenderToApply, isLoadingLenderProofsHook]);
 
-    // Fetch offers for the selected loan
-    const { data: offersData, refetch: fetchOffersForLoan, isLoading: isLoadingOffers } = useContractRead({
-        address: CONTRACT_ADDRESS as Address,
-        abi: CONTRACT_ABI,
-        functionName: 'getOffers', 
-        args: selectedLoanId && /^\d+$/.test(selectedLoanId) ? [BigInt(selectedLoanId)] : undefined,
-        enabled: !!selectedLoanId && /^\d+$/.test(selectedLoanId) && !!currentLoanDetails && !!address && currentLoanDetails[0].toLowerCase() === address.toLowerCase(),
-        onSuccess: (data) => setOffersForLoan(data as Offer[]),
-        onError: (error) => {
-            setMessage(`Error fetching offers for loan ${selectedLoanId}: ${error.message}`);
-            setOffersForLoan([]);
-        }
-    });
 
     // NEW: Fetch ERC20 Allowance for the borrower
     const { 
@@ -285,7 +272,7 @@ function BorrowerView() {
         functionName: 'requestLoan',
         onSuccess: (data) => {
             setMessage(`Loan request submitted! Tx: ${data.hash.slice(0, 10)}...`);
-            if(refetchLoanCount) refetchLoanCount(); 
+            if(refetchLoanRequestCount) refetchLoanRequestCount(); 
             setSelectedToken(TOKEN_ADDRESS_LIST.length > 0 ? TOKEN_ADDRESS_LIST[0].address : ''); 
             setCustomTokenAddress(''); setAmount(''); setMaxInterest(''); setDueDateInput('');
         },
@@ -355,7 +342,7 @@ function BorrowerView() {
             const eventData = logs[0].args;
             if (eventData.borrower === address) {
                 setMessage(`Tx Confirmed: Your new Loan (ID: ${eventData.loanId?.toString()}) is on-chain!`);
-                if(refetchLoanCount) refetchLoanCount(); 
+                if(refetchLoanRequestCount) refetchLoanRequestCount(); 
             }
         },
     });
@@ -380,7 +367,7 @@ function BorrowerView() {
             if (selectedLoanId && eventData.loanId !== undefined && BigInt(selectedLoanId) === eventData.loanId && eventData.borrower === address) {
                 setMessage(`Tx Confirmed: Offer accepted for Your Loan ID ${eventData.loanId.toString()} from lender ${eventData.lender?.slice(0, 6)}...`);
                 if (fetchLoanDetails) fetchLoanDetails();
-                if(refetchLoanCount) refetchLoanCount(); 
+                if(refetchLoanRequestCount) refetchLoanRequestCount(); 
             }
         },
     });
@@ -394,7 +381,7 @@ function BorrowerView() {
              if (selectedLoanId && eventData.loanId !== undefined && BigInt(selectedLoanId) === eventData.loanId && currentLoanDetails && currentLoanDetails[0] === address) {
                 setMessage(`Tx Confirmed: Your Loan (ID: ${eventData.loanId.toString()}) has been funded by ${eventData.lender?.slice(0, 6)}...!`);
                 if (fetchLoanDetails) fetchLoanDetails();
-                if(refetchLoanCount) refetchLoanCount();
+                if(refetchLoanRequestCount) refetchLoanRequestCount();
             }
         },
     });
@@ -408,7 +395,7 @@ function BorrowerView() {
             if (selectedLoanId && eventData.loanId !== undefined && BigInt(selectedLoanId) === eventData.loanId && eventData.borrower === address) {
                 setMessage(`Tx Confirmed: Your Loan (ID: ${eventData.loanId.toString()}) has been successfully repaid!`);
                 if (fetchLoanDetails) fetchLoanDetails();
-                if(refetchLoanCount) refetchLoanCount();
+                if(refetchLoanRequestCount) refetchLoanRequestCount();
                  if (refetchBorrowerAllowance) refetchBorrowerAllowance(); // Refresh allowance after repayment too
             }
         },
@@ -611,7 +598,6 @@ function BorrowerView() {
     const renderOffersList = (offers: Offer[]) => { 
         if (!currentLoanDetails || !address || currentLoanDetails[0].toLowerCase() !== address.toLowerCase()) return null; 
 
-        if (isLoadingOffers) return <p className="text-slate-400">Loading offers for loan {selectedLoanId}...</p>;
         if (!offers || offers.length === 0) return <p className="text-slate-400">No offers yet for loan {selectedLoanId}.</p>;
 
         return (

@@ -1,0 +1,7 @@
+{
+  "ProxyModule#CreditLoan": "0x9cF6bCe29CD9c2cEdb42CE552bEe170F6546Aaa8",
+  "ProxyModule#LoanMarket": "0xB4434b86d8db1007b6597c85839BF4fF7E76A98b",
+  "ProxyModule#PersonalLoan": "0x9F9996008712F0c58A1d11DAbd7773CE21d8fC2B",
+  "ProxyModule#ERC1967Proxy": "0x72De565FA39d364E7eb0628F98e07CAC7196634e",
+  "LoanMarketModule#LoanMarketProxy": "0x72De565FA39d364E7eb0628F98e07CAC7196634e"
+}
