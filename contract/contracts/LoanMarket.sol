@@ -246,4 +246,14 @@ contract LoanMarket is
         emit LoanCreated(requestId, request_.loanType, address(proxy), request_.borrower, sel.lender);
         delete loanRequests[requestId];
     }
+
+    /**
+     * @notice Returns all offers submitted for a given loan request.
+     * @param requestId The ID of the loan request.
+     */
+    function getOffers(uint256 requestId) external view returns (Offer[] memory) {
+        LoanRequest storage request_ = loanRequests[requestId];
+        require(request_.borrower != address(0), "LM: Loan request does not exist");
+        return request_.offers;
+    }
 }
