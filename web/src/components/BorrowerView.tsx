@@ -56,6 +56,9 @@ function BorrowerView() {
     const [amount, setAmount] = useState<string>('');
     const [maxInterest, setMaxInterest] = useState<string>('');
     const [dueDateInput, setDueDateInput] = useState<string>('');
+    const [loanType, setLoanType] = useState<'Personal' | 'Credit'>('Credit');
+    const [numPayments, setNumPayments] = useState<string>('');
+    const [paymentIntervalDays, setPaymentIntervalDays] = useState<string>('');
     
     const [selectedLoanId, setSelectedLoanId] = useState<string>(''); 
     
@@ -278,8 +281,9 @@ function BorrowerView() {
         onSuccess: (data) => {
             setMessage(`Loan request submitted! Tx: ${data.hash.slice(0, 10)}...`);
             if(refetchLoanRequestCount) refetchLoanRequestCount(); 
-            setSelectedToken(TOKEN_ADDRESS_LIST.length > 0 ? TOKEN_ADDRESS_LIST[0].address : ''); 
+            setSelectedToken(TOKEN_ADDRESS_LIST.length > 0 ? TOKEN_ADDRESS_LIST[0].address : '');
             setCustomTokenAddress(''); setAmount(''); setMaxInterest(''); setDueDateInput('');
+            setNumPayments(''); setPaymentIntervalDays('');
         },
         onError: (error) => setMessage(`Request Loan Error: ${error.message.substring(0,150)}...`),
     });
@@ -412,32 +416,50 @@ function BorrowerView() {
         if (!isAddress(finalTokenAddress)) { setMessage("Invalid Token Address."); return; }
         if (!amount || parseFloat(amount) <= 0) { setMessage("Amount must be greater than 0."); return; }
         if (!maxInterest || parseFloat(maxInterest) < 0 || parseFloat(maxInterest) > 1000 ) { setMessage("Max Interest must be between 0 and 1000%."); return; }
-        if (!dueDateInput) { setMessage("A due date is required."); return; }
 
-        const dateParts = dueDateInput.split('-'); 
-        const year = parseInt(dateParts[0]);
-        const month = parseInt(dateParts[1]) - 1; 
-        const day = parseInt(dateParts[2]);
-        
-        const dueDateObj = new Date(Date.UTC(year, month, day, 12, 0, 0, 0)); 
-        const dueDateInSeconds = BigInt(Math.floor(dueDateObj.getTime() / 1000));
-        const nowInSeconds = BigInt(Math.floor(Date.now() / 1000));
-
-        if (dueDateInSeconds <= nowInSeconds) {
-            setMessage(`Due date (${dueDateObj.toLocaleDateString()}) must be in the future.`);
-            return;
-        }
-        
         const interestBps = BigInt(Math.round(parseFloat(maxInterest) * 100));
-        requestLoanWrite({ args: [
-            finalTokenAddress as Address,
-            parseEther(amount),
-            interestBps,
-            1n,
-            dueDateInSeconds,
-            0n,
-            0n
-        ] });
+
+        if (loanType === 'Credit') {
+            if (!dueDateInput) { setMessage("A due date is required."); return; }
+
+            const dateParts = dueDateInput.split('-');
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1;
+            const day = parseInt(dateParts[2]);
+
+            const dueDateObj = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
+            const dueDateInSeconds = BigInt(Math.floor(dueDateObj.getTime() / 1000));
+            const nowInSeconds = BigInt(Math.floor(Date.now() / 1000));
+
+            if (dueDateInSeconds <= nowInSeconds) {
+                setMessage(`Due date (${dueDateObj.toLocaleDateString()}) must be in the future.`);
+                return;
+            }
+
+            requestLoanWrite({ args: [
+                finalTokenAddress as Address,
+                parseEther(amount),
+                interestBps,
+                1n,
+                dueDateInSeconds,
+                0n,
+                0n
+            ] });
+        } else {
+            if (!numPayments || parseInt(numPayments) <= 0) { setMessage("Number of payments must be greater than 0."); return; }
+            if (!paymentIntervalDays || parseInt(paymentIntervalDays) <= 0) { setMessage("Payment interval must be greater than 0 days."); return; }
+            const payments = BigInt(parseInt(numPayments));
+            const interval = BigInt(parseInt(paymentIntervalDays) * 86400);
+            requestLoanWrite({ args: [
+                finalTokenAddress as Address,
+                parseEther(amount),
+                interestBps,
+                0n,
+                0n,
+                payments,
+                interval
+            ] });
+        }
     };
 
     const handleApplyForLoan = () => {
@@ -685,6 +707,13 @@ function BorrowerView() {
                 <h3 className="text-xl font-semibold mb-4 text-sky-400">1. Request a New Loan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                        <label htmlFor="loanTypeB" className={labelClass}>Loan Type</label>
+                        <select id="loanTypeB" value={loanType} onChange={(e) => setLoanType(e.target.value as 'Personal' | 'Credit')} className={inputClass}>
+                            <option value="Personal">Personal</option>
+                            <option value="Credit">Credit</option>
+                        </select>
+                    </div>
+                    <div>
                         <label htmlFor="tokenAddressB" className={labelClass}>Token Address (ERC20)</label>
                         <select id="tokenAddressB" value={selectedToken} onChange={(e) => setSelectedToken(e.target.value)} className={inputClass}>
                             {TOKEN_ADDRESS_LIST.map(token => (
@@ -706,15 +735,28 @@ function BorrowerView() {
                         <label htmlFor="maxInterestB" className={labelClass}>Max Interest You'll Pay (%)</label>
                         <input id="maxInterestB" type="number" value={maxInterest} onChange={(e) => setMaxInterest(e.target.value)} placeholder="e.g., 5.25 for 5.25%" className={inputClass} />
                     </div>
-                    <div>
-                        <label htmlFor="dueDateB" className={labelClass}>Preferred Due Date</label>
-                        <input id="dueDateB" type="date" value={dueDateInput} onChange={(e) => setDueDateInput(e.target.value)} className={inputClass} />
-                    </div>
+                    {loanType === 'Credit' ? (
+                        <div>
+                            <label htmlFor="dueDateB" className={labelClass}>Preferred Due Date</label>
+                            <input id="dueDateB" type="date" value={dueDateInput} onChange={(e) => setDueDateInput(e.target.value)} className={inputClass} />
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <label htmlFor="numPaymentsB" className={labelClass}>Number of Payments</label>
+                                <input id="numPaymentsB" type="number" value={numPayments} onChange={(e) => setNumPayments(e.target.value)} className={inputClass} />
+                            </div>
+                            <div>
+                                <label htmlFor="paymentIntervalB" className={labelClass}>Payment Interval (days)</label>
+                                <input id="paymentIntervalB" type="number" value={paymentIntervalDays} onChange={(e) => setPaymentIntervalDays(e.target.value)} className={inputClass} />
+                            </div>
+                        </>
+                    )}
                 </div>
-                <button 
-                    onClick={handleRequestLoan} 
-                    disabled={isRequestingLoan || !finalTokenAddress || !isAddress(finalTokenAddress) || !amount || !maxInterest || !dueDateInput} 
-                    className={`${buttonClass(isRequestingLoan, !finalTokenAddress || !isAddress(finalTokenAddress) || !amount || !maxInterest || !dueDateInput)} mt-6`}
+                <button
+                    onClick={handleRequestLoan}
+                    disabled={isRequestingLoan || !finalTokenAddress || !isAddress(finalTokenAddress) || !amount || !maxInterest || (loanType === 'Credit' ? !dueDateInput : !numPayments || !paymentIntervalDays)}
+                    className={`${buttonClass(isRequestingLoan, isRequestingLoan || !finalTokenAddress || !isAddress(finalTokenAddress) || !amount || !maxInterest || (loanType === 'Credit' ? !dueDateInput : !numPayments || !paymentIntervalDays))} mt-6`}
                 >
                     {isRequestingLoan ? 'Submitting Request...' : 'Request Loan'}
                 </button>
