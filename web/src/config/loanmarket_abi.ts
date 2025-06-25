@@ -335,9 +335,60 @@ export const CONTRACT_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "acceptOffer",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+  "name": "acceptOffer",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+},
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getOffers",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "lender",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amountOffered",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "interestBpsOffered",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymentIntervalOffered",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "paymentsOffered",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dueDateOffered",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct LoanMarket.Offer[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
