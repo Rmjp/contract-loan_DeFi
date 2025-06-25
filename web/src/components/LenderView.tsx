@@ -65,6 +65,8 @@ function LenderView() {
     const [amountOffer, setAmountOffer] = useState('');
     const [paybackTimeOffer, setPaybackTimeOffer] = useState('');
     const [interestOffer, setInterestOffer] = useState('');
+    const [isRejectingApplication, setIsRejectingApplication] = useState(false);
+    const [isFundingLoan, setIsFundingLoan] = useState(false);
 
     // Data display
     const [isLenderActuallyRegistered, setIsLenderActuallyRegistered] = useState(false);
@@ -480,11 +482,15 @@ function LenderView() {
     };
 
     const handleRejectApplication = () => {
+        setIsRejectingApplication(true);
         setMessage('Rejecting applications is not supported with the new contract.');
+        setTimeout(() => setIsRejectingApplication(false), 500);
     };
 
     const handleFundLoan = () => {
+        setIsFundingLoan(true);
         setMessage('Funding loans is handled directly on the deployed loan contract.');
+        setTimeout(() => setIsFundingLoan(false), 500);
     };
 
     const handleApproveTokenL = () => {
