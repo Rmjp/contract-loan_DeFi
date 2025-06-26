@@ -91,11 +91,23 @@ export default function CreditLoanView() {
   });
 
   useEffect(() => {
-    const loanIdList: string[] = [];
-    const findLoan = async () => {
-      if (!address || loanRequestCount === undefined || !publicClient) return;
+    const fetchLoans = async () => {
+      if (!address || loanRequestCount === undefined || !publicClient) {
+        setLoanIdList([]);
+        return;
+      }
+      const ids: string[] = [];
       for (let i = 1; i <= Number(loanRequestCount); i++) {
         try {
+          const loanData = await publicClient.readContract({
+            address: CONTRACT_ADDRESS as Address,
+            abi: CONTRACT_ABI,
+            functionName: 'loanRequests',
+            args: [BigInt(i)],
+          }) as any[];
+          if (!loanData || loanData[0] === '0x0000000000000000000000000000000000000000') continue;
+          if (loanData[4] !== 1n) continue; // only credit loans
+
           const addr = await publicClient.readContract({
             address: CONTRACT_ADDRESS as Address,
             abi: CONTRACT_ABI,
@@ -103,6 +115,7 @@ export default function CreditLoanView() {
             args: [BigInt(i)],
           });
           if (!addr || addr === '0x0000000000000000000000000000000000000000') continue;
+
           try {
             const state = await publicClient.readContract({
               address: addr as Address,
@@ -110,17 +123,25 @@ export default function CreditLoanView() {
               functionName: 'state',
             }) as any[];
             const [b, l] = state;
-            console.log(`Loan ID ${i}: Borrower: ${b.toLowerCase()}, Lender: ${l.toLowerCase()}`, address.toLowerCase());
-            if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
-              loanIdList.push(i.toString());
-              // setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
-            }
-          } catch { /* ignore non credit loans */ }
-        } catch {}
+            if (
+              b.toLowerCase() === address.toLowerCase() ||
+              l.toLowerCase() === address.toLowerCase()
+            ) {
+              ids.push(i.toString());
+              if (ids.length === 1) {
+                setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
+              }
+          } catch {
+            /* ignore if not a credit loan contract */
+          }
+        } catch {
+          /* ignore errors */
+        }
       }
+      setLoanIdList(ids);
     };
-    findLoan();
-    setLoanIdList(loanIdList);
+
+    fetchLoans();
   }, [address, loanRequestCount, publicClient]);
 
   return (
