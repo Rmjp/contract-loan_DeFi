@@ -64,6 +64,8 @@ function LenderView() {
     const [amountOffer, setAmountOffer] = useState('');
     const [paybackTimeOffer, setPaybackTimeOffer] = useState('');
     const [interestOffer, setInterestOffer] = useState('');
+    const [numPaymentsOffer, setNumPaymentsOffer] = useState('');
+    const [paymentIntervalDaysOffer, setPaymentIntervalDaysOffer] = useState('');
     const [isRejectingApplication, setIsRejectingApplication] = useState(false);
     const [isFundingLoan, setIsFundingLoan] = useState(false);
 
@@ -441,19 +443,37 @@ function LenderView() {
         if (!loanIdToReview || !/^\d+$/.test(loanIdToReview)) { setMessage("Valid Loan ID from the list must be selected."); return; }
         if (!loanDetailsForAction) { setMessage("Loan details not loaded. Please select a loan and view details."); return;}
         if (!amountOffer || parseFloat(amountOffer) <= 0) { setMessage("A valid offer amount greater than zero is required."); return; }
-        if (!paybackTimeOffer) { setMessage("A payback date is required."); return; }
         if (!interestOffer || parseFloat(interestOffer) < 0) { setMessage("A valid interest offer (e.g., 5.25 for 5.25%) is required."); return; }
-    
-        const dateParts = paybackTimeOffer.split('-');
-        const year = parseInt(dateParts[0]);
-        const month = parseInt(dateParts[1]) - 1;
-        const day = parseInt(dateParts[2]);
-        const paybackDateObj = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
-        const paybackTimestamp = BigInt(Math.floor(paybackDateObj.getTime() / 1000));
 
-        if (paybackTimestamp <= Math.floor(Date.now() / 1000)) {
-            setMessage("Payback date must be in the future.");
-            return;
+        const isCreditLoan = loanDetailsForAction[4] === 1n;
+
+        if (isCreditLoan) {
+            if (!paybackTimeOffer) { setMessage("A payback date is required."); return; }
+        } else {
+            if (!numPaymentsOffer || parseInt(numPaymentsOffer) <= 0) { setMessage("Number of payments must be greater than 0."); return; }
+            if (!paymentIntervalDaysOffer || parseInt(paymentIntervalDaysOffer) <= 0) { setMessage("Payment interval must be greater than 0 days."); return; }
+        }
+    
+        let dueDateOffered = 0n;
+        let paymentsOffered = 0n;
+        let paymentIntervalOffered = 0n;
+
+        if (isCreditLoan) {
+            const dateParts = paybackTimeOffer.split('-');
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1;
+            const day = parseInt(dateParts[2]);
+            const paybackDateObj = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
+            const paybackTimestamp = BigInt(Math.floor(paybackDateObj.getTime() / 1000));
+
+            if (paybackTimestamp <= Math.floor(Date.now() / 1000)) {
+                setMessage("Payback date must be in the future.");
+                return;
+            }
+            dueDateOffered = paybackTimestamp;
+        } else {
+            paymentsOffered = BigInt(parseInt(numPaymentsOffer));
+            paymentIntervalOffered = BigInt(parseInt(paymentIntervalDaysOffer) * 86400);
         }
     
         const interestBps = BigInt(Math.round(parseFloat(interestOffer) * 100));
@@ -469,9 +489,9 @@ function LenderView() {
                 BigInt(loanIdToReview),
                 parseEther(amountOffer),
                 interestBps,
-                paybackTimestamp,
-                0n,
-                0n
+                dueDateOffered,
+                paymentsOffered,
+                paymentIntervalOffered
             ]
         });
     };
@@ -728,17 +748,49 @@ function LenderView() {
                                         <label htmlFor="amountOfferL" className={labelClass}>Your Amount Offer</label>
                                         <input id="amountOfferL" type="number" value={amountOffer} onChange={(e) => setAmountOffer(e.target.value)} placeholder={`e.g., ${loanDetailsForAction ? formatEther(loanDetailsForAction[2]) : '0.0'}`} className={inputClass} />
                                     </div>
-                                    <div>
-                                        <label htmlFor="paybackTimeOfferL" className={labelClass}>Your Payback Date</label>
-                                        <input id="paybackTimeOfferL" type="date" value={paybackTimeOffer} onChange={(e) => setPaybackTimeOffer(e.target.value)} className={inputClass} />
-                                    </div>
+                                    {loanDetailsForAction && loanDetailsForAction[4] === 1n ? (
+                                        <div>
+                                            <label htmlFor="paybackTimeOfferL" className={labelClass}>Your Payback Date</label>
+                                            <input id="paybackTimeOfferL" type="date" value={paybackTimeOffer} onChange={(e) => setPaybackTimeOffer(e.target.value)} className={inputClass} />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div>
+                                                <label htmlFor="numPaymentsOfferL" className={labelClass}>Number of Payments</label>
+                                                <input id="numPaymentsOfferL" type="number" value={numPaymentsOffer} onChange={(e) => setNumPaymentsOffer(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="paymentIntervalOfferL" className={labelClass}>Payment Interval (days)</label>
+                                                <input id="paymentIntervalOfferL" type="number" value={paymentIntervalDaysOffer} onChange={(e) => setPaymentIntervalDaysOffer(e.target.value)} className={inputClass} />
+                                            </div>
+                                        </>
+                                    )}
                                     <div>
                                         <label htmlFor="interestOfferL" className={labelClass}>Your Interest Offer (%)</label>
                                         <input id="interestOfferL" type="number" value={interestOffer} onChange={(e) => setInterestOffer(e.target.value)} placeholder={`e.g., 5.25 (max ${loanDetailsForAction ? Number(loanDetailsForAction[3])/100 : 0}%)`} className={inputClass} />
                                     </div>
                                 </div>
                                 <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 mt-4">
-                                    <button onClick={handleSubmitOffer} disabled={isSubmittingOffer || !interestOffer || !amountOffer || !paybackTimeOffer} className={`${buttonClass(isSubmittingOffer, !interestOffer || !amountOffer || !paybackTimeOffer)} flex-1`}>
+                                    <button
+                                        onClick={handleSubmitOffer}
+                                        disabled={
+                                            isSubmittingOffer ||
+                                            !interestOffer ||
+                                            !amountOffer ||
+                                            (loanDetailsForAction && loanDetailsForAction[4] === 1n
+                                                ? !paybackTimeOffer
+                                                : !numPaymentsOffer || !paymentIntervalDaysOffer)
+                                        }
+                                        className={`${buttonClass(
+                                            isSubmittingOffer,
+                                            isSubmittingOffer ||
+                                                !interestOffer ||
+                                                !amountOffer ||
+                                                (loanDetailsForAction && loanDetailsForAction[4] === 1n
+                                                    ? !paybackTimeOffer
+                                                    : !numPaymentsOffer || !paymentIntervalDaysOffer)
+                                        )} flex-1`}
+                                    >
                                         {isSubmittingOffer ? 'Submitting Offer...' : 'Submit Offer'}
                                     </button>
                                     <button onClick={handleRejectApplication} disabled={isRejectingApplication} className={`w-full sm:w-auto bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors disabled:bg-slate-500 shadow-md flex-1 ${isRejectingApplication ? 'opacity-70 cursor-wait' : ''}`}>
