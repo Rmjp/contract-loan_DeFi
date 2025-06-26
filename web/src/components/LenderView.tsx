@@ -177,8 +177,8 @@ function LenderView() {
                             functionName: 'loanRequests',
                             args: [BigInt(i)],
                         }) as LoanDataFromMapping;
-                        
-                        if (loanData && loanData[0] != 0n) {
+                        console.log(`Fetched loan data for ID ${i}:`, loanData);
+                        if (loanData && loanData[0] != "0x0000000000000000000000000000000000000000") {
                             apps.push({
                                 loanId: i.toString(),
                                 borrower: loanData[0],
@@ -226,7 +226,7 @@ function LenderView() {
                         args: [BigInt(i)],
                     }) as LoanDataFromMapping;
 
-                    if (loanData) {
+                    if (loanData && loanData[0] != "0x0000000000000000000000000000000000000000") {
                         loansToFund.push({
                             loanId: i.toString(),
                             borrower: loanData[0],
@@ -640,9 +640,9 @@ function LenderView() {
                 <button onClick={() => setActiveSection('review')} className={menuButtonClass('review', !isLenderActuallyRegistered)} disabled={!isLenderActuallyRegistered}>
                     2. Review & Offer
                 </button>
-                <button onClick={() => setActiveSection('fund')} className={menuButtonClass('fund', !isLenderActuallyRegistered)} disabled={!isLenderActuallyRegistered}>
+                {/* <button onClick={() => setActiveSection('fund')} className={menuButtonClass('fund', !isLenderActuallyRegistered)} disabled={!isLenderActuallyRegistered}>
                     3. Approve & Fund
-                </button>
+                </button> */}
             </div>
 
             {/* Section 1: Lender Setup */}
