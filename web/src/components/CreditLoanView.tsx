@@ -143,10 +143,14 @@ export default function CreditLoanView() {
         <p className="text-sm text-slate-400 break-all">Contract: {loanAddress as string}</p>
       )}
       {outstanding !== undefined && (
-        <p className="text-sm text-sky-300">Outstanding: {outstanding.toString()}</p>
+        <p className="text-sm text-sky-300">
+          Outstanding: {formatEther(outstanding)} tokens
+        </p>
       )}
       {available !== undefined && (
-        <p className="text-sm text-sky-300">Available Credit: {available.toString()}</p>
+        <p className="text-sm text-sky-300">
+          Available Credit: {formatEther(available)} tokens
+        </p>
       )}
       <div className="flex space-x-4">
         <button className={`px-4 py-2 rounded ${activeTab === 'borrower' ? 'bg-purple-600 text-white' : 'bg-slate-600 text-slate-200'}`} onClick={() => setActiveTab('borrower')}>Borrower</button>
