@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react';
 import { useContractRead, useContractWrite, useAccount, usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI } from '@/config/contract';
 import { PERSONAL_LOAN_ABI } from '@/config/personalloan_abi';
-import { Address, formatEther } from 'viem';
+import { Address, formatEther, parseEther } from 'viem';
 
 export default function PersonalLoanView() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const [loanId, setLoanId] = useState('');
   const [loanIdList, setLoanIdList] = useState<string[]>([]);
+  const [approveAmt, setApproveAmt] = useState('');
   const { data: loanRequestCount } = useContractRead({
     address: CONTRACT_ADDRESS as Address,
     abi: CONTRACT_ABI,
@@ -88,6 +89,12 @@ export default function PersonalLoanView() {
   });
 
   useEffect(() => {
+    if (principalAmount !== undefined && approveAmt === '') {
+      setApproveAmt(formatEther(principalAmount));
+    }
+  }, [principalAmount, approveAmt]);
+
+  useEffect(() => {
     let loanIdList: string[] = [];
     const findLoan = async () => {
       if (!address || loanRequestCount === undefined || !publicClient) return;
@@ -144,7 +151,13 @@ export default function PersonalLoanView() {
         <p className="text-sm text-slate-400 break-all">Contract: {loanAddress as string}</p>
       )}
       {installmentAmount !== undefined && (
-        <p className="text-sm text-sky-300">Installment: {installmentAmount.toString()}</p>
+        <p className="text-sm text-sky-300">Installment: {formatEther(installmentAmount)} tokens</p>
+      )}
+      {installmentAmount !== undefined && (
+        <p className="text-sm text-sky-300">Amount Due: {formatEther(installmentAmount)} tokens</p>
+      )}
+      {principalAmount !== undefined && (
+        <p className="text-sm text-sky-300">Remaining Principal: {formatEther(principalAmount)} tokens</p>
       )}
       {paymentsMade !== undefined && numberOfPayments !== undefined && (
         <p className="text-sm text-sky-300">Payments: {paymentsMade.toString()} / {numberOfPayments.toString()}</p>
@@ -154,17 +167,28 @@ export default function PersonalLoanView() {
         <button className={`px-4 py-2 rounded ${activeTab === 'lender' ? 'bg-purple-600 text-white' : 'bg-slate-600 text-slate-200'}`} onClick={() => setActiveTab('lender')}>Lender</button>
       </div>
       {activeTab === 'borrower' ? (
-        <button
-          onClick={() => makePaymentWrite()}
-          className="bg-sky-600 text-white px-4 py-2 rounded"
-          disabled={!loanAddress}
-        >Make Installment Payment</button>
+        <>
+          {installmentAmount !== undefined && (
+            <p className="text-sm text-sky-300">Next Payment: {formatEther(installmentAmount)} tokens</p>
+          )}
+          <button
+            onClick={() => makePaymentWrite()}
+            className="bg-sky-600 text-white px-4 py-2 rounded"
+            disabled={!loanAddress}
+          >Make Installment Payment</button>
+        </>
       ) : (
         <div className="space-y-2">
+          <input
+            className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+            placeholder="Amount to approve"
+            value={approveAmt}
+            onChange={e => setApproveAmt(e.target.value)}
+          />
           <button
-            onClick={() => approveWrite({ args: [loanAddress as Address, principalAmount ?? 0n] })}
+            onClick={() => approveWrite({ args: [loanAddress as Address, parseEther(approveAmt || '0')] })}
             className="bg-sky-600 text-white px-4 py-2 rounded"
-            disabled={!loanAddress || !tokenAddress || principalAmount === undefined}
+            disabled={!loanAddress || !tokenAddress || approveAmt === ''}
           >Approve Tokens</button>
           {allowance !== undefined && (
             <p className="text-sm text-slate-300 mt-1">
