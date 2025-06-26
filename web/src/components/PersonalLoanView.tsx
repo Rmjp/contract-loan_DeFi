@@ -88,40 +88,18 @@ export default function PersonalLoanView() {
   });
 
   useEffect(() => {
-    const fetchLoans = async () => {
-      if (!address || loanRequestCount === undefined || !publicClient) {
-        setLoanIdList([]);
-        return;
-      }
-      const ids: string[] = [];
+    let loanIdList: string[] = [];
+    const findLoan = async () => {
+      if (!address || loanRequestCount === undefined || !publicClient) return;
       for (let i = 1; i <= Number(loanRequestCount); i++) {
-          const loanData = await publicClient.readContract({
+        console.log(`Checking loan at index ${i}`);
+        try {
+          const addr = await publicClient.readContract({
             address: CONTRACT_ADDRESS as Address,
             abi: CONTRACT_ABI,
-            functionName: 'loanRequests',
+            functionName: 'deployedLoans',
             args: [BigInt(i)],
-          }) as any[];
-          if (!loanData || loanData[0] === '0x0000000000000000000000000000000000000000') continue;
-          if (loanData[4] !== 0n) continue; // only personal loans
-
-
-            if (
-              b.toLowerCase() === address.toLowerCase() ||
-              l.toLowerCase() === address.toLowerCase()
-            ) {
-              ids.push(i.toString());
-              if (ids.length === 1) {
-                setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
-              }
-          } catch {
-            /* ignore if not a personal loan */
-          }
-        } catch {
-          /* ignore errors */
-        }
-      setLoanIdList(ids);
-
-    fetchLoans();
+          });
           if (!addr || addr === '0x0000000000000000000000000000000000000000') continue;
           try {
             const state = await publicClient.readContract({
