@@ -612,7 +612,15 @@ function LenderView() {
                 <p><strong>Token:</strong> <span className="font-mono text-xs">{token}</span></p>
                 <p><strong>Amount Requested:</strong> {formatEther(amountRequested)} Tokens</p>
                 <p><strong>Borrower's Max Interest:</strong> {Number(maxInterestBps) / 100}%</p>
-                <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
+                <p><strong>Loan Type:</strong> {loanType === 1n ? 'Credit' : 'Personal'}</p>
+                {loanType === 1n ? (
+                    <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
+                ) : (
+                    <>
+                        <p><strong>Requested Number of Payments:</strong> {requestedPayments.toString()}</p>
+                        <p><strong>Payment Interval:</strong> {Number(requestedPaymentInterval) / 86400} days</p>
+                    </>
+                )}
                 {/* Additional loan details such as selected lender or funding status are not available from loanRequests */}
             </div>
         );
