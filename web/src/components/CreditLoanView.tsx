@@ -113,8 +113,7 @@ export default function CreditLoanView() {
             console.log(`Loan ID ${i}: Borrower: ${b.toLowerCase()}, Lender: ${l.toLowerCase()}`, address.toLowerCase());
             if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
               loanIdList.push(i.toString());
-              setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
-              return;
+              // setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
             }
           } catch { /* ignore non credit loans */ }
         } catch {}

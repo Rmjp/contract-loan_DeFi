@@ -88,10 +88,11 @@ export default function PersonalLoanView() {
   });
 
   useEffect(() => {
-    const loanIdList: string[] = [];
+    let loanIdList: string[] = [];
     const findLoan = async () => {
       if (!address || loanRequestCount === undefined || !publicClient) return;
       for (let i = 1; i <= Number(loanRequestCount); i++) {
+        console.log(`Checking loan at index ${i}`);
         try {
           const addr = await publicClient.readContract({
             address: CONTRACT_ADDRESS as Address,
@@ -109,11 +110,14 @@ export default function PersonalLoanView() {
             const [b, l] = state;
             if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
               loanIdList.push(i.toString());
-              setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
-              return;
+              // setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
             }
-          } catch { /* not personal loan */ }
-        } catch {}
+          } catch {
+           }
+        } catch (error){
+          console.error(`Error fetching loan at index ${i}:`, error);
+          continue;
+        }
       }
     };
     findLoan();
