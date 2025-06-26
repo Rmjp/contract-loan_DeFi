@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useContractRead, useContractWrite, useAccount, usePublicClient } from 'wagmi';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/config/contract';
+import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI } from '@/config/contract';
 import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
-import { parseEther, Address } from 'viem';
+import { parseEther, formatEther, Address } from 'viem';
 
 export default function CreditLoanView() {
   const { address } = useAccount();
@@ -43,6 +43,29 @@ export default function CreditLoanView() {
     enabled: !!loanAddress,
   });
 
+  const { data: tokenAddress } = useContractRead({
+    address: loanAddress as Address,
+    abi: CREDIT_LOAN_ABI,
+    functionName: 'token',
+    enabled: !!loanAddress,
+  });
+
+  const { data: principalAmount } = useContractRead({
+    address: loanAddress as Address,
+    abi: CREDIT_LOAN_ABI,
+    functionName: 'principalAmount',
+    enabled: !!loanAddress,
+  });
+
+  const { data: allowance } = useContractRead({
+    address: tokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address && loanAddress ? [address, loanAddress as Address] : undefined,
+    enabled: !!address && !!tokenAddress && !!loanAddress,
+    watch: true,
+  });
+
   const { write: drawWrite } = useContractWrite({
     address: loanAddress as Address,
     abi: CREDIT_LOAN_ABI,
@@ -59,6 +82,12 @@ export default function CreditLoanView() {
     address: loanAddress as Address,
     abi: CREDIT_LOAN_ABI,
     functionName: 'fundLoan',
+  });
+
+  const { write: approveWrite } = useContractWrite({
+    address: tokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: 'approve',
   });
 
   useEffect(() => {
@@ -84,8 +113,7 @@ export default function CreditLoanView() {
             console.log(`Loan ID ${i}: Borrower: ${b.toLowerCase()}, Lender: ${l.toLowerCase()}`, address.toLowerCase());
             if (b.toLowerCase() === address.toLowerCase() || l.toLowerCase() === address.toLowerCase()) {
               loanIdList.push(i.toString());
-              setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
-              return;
+              // setActiveTab(b.toLowerCase() === address.toLowerCase() ? 'borrower' : 'lender');
             }
           } catch { /* ignore non credit loans */ }
         } catch {}
@@ -114,10 +142,14 @@ export default function CreditLoanView() {
         <p className="text-sm text-slate-400 break-all">Contract: {loanAddress as string}</p>
       )}
       {outstanding !== undefined && (
-        <p className="text-sm text-sky-300">Outstanding: {outstanding.toString()}</p>
+        <p className="text-sm text-sky-300">
+          Outstanding: {formatEther(outstanding)} tokens
+        </p>
       )}
       {available !== undefined && (
-        <p className="text-sm text-sky-300">Available Credit: {available.toString()}</p>
+        <p className="text-sm text-sky-300">
+          Available Credit: {formatEther(available)} tokens
+        </p>
       )}
       <div className="flex space-x-4">
         <button className={`px-4 py-2 rounded ${activeTab === 'borrower' ? 'bg-purple-600 text-white' : 'bg-slate-600 text-slate-200'}`} onClick={() => setActiveTab('borrower')}>Borrower</button>
@@ -154,6 +186,16 @@ export default function CreditLoanView() {
         </>
       ) : (
         <div className="space-y-2">
+          <button
+            onClick={() => approveWrite({ args: [loanAddress as Address, principalAmount ?? 0n] })}
+            className="bg-sky-600 text-white px-4 py-2 rounded"
+            disabled={!loanAddress || !tokenAddress || principalAmount === undefined}
+          >Approve Tokens</button>
+          {allowance !== undefined && (
+            <p className="text-sm text-slate-300 mt-1">
+              Current Allowance: <span className="font-semibold text-purple-300">{formatEther(allowance)} tokens</span>
+            </p>
+          )}
           <button
             onClick={() => fundLoanWrite()}
             className="bg-purple-600 text-white px-4 py-2 rounded"
