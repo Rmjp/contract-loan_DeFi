@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useContractRead, useContractWrite, useAccount, usePublicClient } from 'wagmi';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/config/contract';
+import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI } from '@/config/contract';
 import { PERSONAL_LOAN_ABI } from '@/config/personalloan_abi';
 import { Address } from 'viem';
 
@@ -46,10 +46,30 @@ export default function PersonalLoanView() {
     enabled: !!loanAddress,
   });
 
+  const { data: tokenAddress } = useContractRead({
+    address: loanAddress as Address,
+    abi: PERSONAL_LOAN_ABI,
+    functionName: 'token',
+    enabled: !!loanAddress,
+  });
+
+  const { data: principalAmount } = useContractRead({
+    address: loanAddress as Address,
+    abi: PERSONAL_LOAN_ABI,
+    functionName: 'principalAmount',
+    enabled: !!loanAddress,
+  });
+
   const { write: fundLoanWrite } = useContractWrite({
     address: loanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'fundLoan',
+  });
+
+  const { write: approveWrite } = useContractWrite({
+    address: tokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: 'approve',
   });
 
   const { write: makePaymentWrite } = useContractWrite({
@@ -127,11 +147,18 @@ export default function PersonalLoanView() {
           disabled={!loanAddress}
         >Make Installment Payment</button>
       ) : (
-        <button
-          onClick={() => fundLoanWrite()}
-          className="bg-purple-600 text-white px-4 py-2 rounded"
-          disabled={!loanAddress}
-        >Fund Loan</button>
+        <div className="space-y-2">
+          <button
+            onClick={() => approveWrite({ args: [loanAddress as Address, principalAmount ?? 0n] })}
+            className="bg-sky-600 text-white px-4 py-2 rounded"
+            disabled={!loanAddress || !tokenAddress || principalAmount === undefined}
+          >Approve Tokens</button>
+          <button
+            onClick={() => fundLoanWrite()}
+            className="bg-purple-600 text-white px-4 py-2 rounded"
+            disabled={!loanAddress}
+          >Fund Loan</button>
+        </div>
       )}
     </div>
   );
