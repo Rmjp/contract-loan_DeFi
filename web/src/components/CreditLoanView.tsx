@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useContractRead, useContractWrite, useAccount, usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI, ERC20_ABI } from '@/config/contract';
 import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
-import { parseEther, Address } from 'viem';
+import { parseEther, formatEther, Address } from 'viem';
 
 export default function CreditLoanView() {
   const { address } = useAccount();
@@ -55,6 +55,15 @@ export default function CreditLoanView() {
     abi: CREDIT_LOAN_ABI,
     functionName: 'principalAmount',
     enabled: !!loanAddress,
+  });
+
+  const { data: allowance } = useContractRead({
+    address: tokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address && loanAddress ? [address, loanAddress as Address] : undefined,
+    enabled: !!address && !!tokenAddress && !!loanAddress,
+    watch: true,
   });
 
   const { write: drawWrite } = useContractWrite({
@@ -179,6 +188,11 @@ export default function CreditLoanView() {
             className="bg-sky-600 text-white px-4 py-2 rounded"
             disabled={!loanAddress || !tokenAddress || principalAmount === undefined}
           >Approve Tokens</button>
+          {allowance !== undefined && (
+            <p className="text-sm text-slate-300 mt-1">
+              Current Allowance: <span className="font-semibold text-purple-300">{formatEther(allowance)} tokens</span>
+            </p>
+          )}
           <button
             onClick={() => fundLoanWrite()}
             className="bg-purple-600 text-white px-4 py-2 rounded"
