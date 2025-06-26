@@ -13,6 +13,7 @@ export default function CreditLoanView() {
   const [activeTab, setActiveTab] = useState<'borrower' | 'lender'>('borrower');
   const [drawAmt, setDrawAmt] = useState('');
   const [repayAmt, setRepayAmt] = useState('');
+  const [approveAmt, setApproveAmt] = useState('');
 
   const { data: loanRequestCount } = useContractRead({
     address: CONTRACT_ADDRESS as Address,
@@ -91,6 +92,18 @@ export default function CreditLoanView() {
   });
 
   useEffect(() => {
+    if (outstanding !== undefined && repayAmt === '') {
+      setRepayAmt(formatEther(outstanding));
+    }
+  }, [outstanding, repayAmt]);
+
+  useEffect(() => {
+    if (principalAmount !== undefined && approveAmt === '') {
+      setApproveAmt(formatEther(principalAmount));
+    }
+  }, [principalAmount, approveAmt]);
+
+  useEffect(() => {
     const loanIdList: string[] = [];
     const findLoan = async () => {
       if (!address || loanRequestCount === undefined || !publicClient) return;
@@ -146,6 +159,11 @@ export default function CreditLoanView() {
           Outstanding: {formatEther(outstanding)} tokens
         </p>
       )}
+      {outstanding !== undefined && (
+        <p className="text-sm text-sky-300">
+          Amount Due: {formatEther(outstanding)} tokens
+        </p>
+      )}
       {available !== undefined && (
         <p className="text-sm text-sky-300">
           Available Credit: {formatEther(available)} tokens
@@ -186,10 +204,16 @@ export default function CreditLoanView() {
         </>
       ) : (
         <div className="space-y-2">
+          <input
+            className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+            placeholder="Amount to approve"
+            value={approveAmt}
+            onChange={e => setApproveAmt(e.target.value)}
+          />
           <button
-            onClick={() => approveWrite({ args: [loanAddress as Address, principalAmount ?? 0n] })}
+            onClick={() => approveWrite({ args: [loanAddress as Address, parseEther(approveAmt || '0')] })}
             className="bg-sky-600 text-white px-4 py-2 rounded"
-            disabled={!loanAddress || !tokenAddress || principalAmount === undefined}
+            disabled={!loanAddress || !tokenAddress || approveAmt === ''}
           >Approve Tokens</button>
           {allowance !== undefined && (
             <p className="text-sm text-slate-300 mt-1">
