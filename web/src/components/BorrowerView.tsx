@@ -618,6 +618,7 @@ function BorrowerView() {
             requestedPaymentInterval,
             requestedDueDate
         ] = loanData;
+        console.log(loanData);
 
         const statusText = <span className="text-yellow-400 font-semibold">Requested</span>;
 
@@ -629,8 +630,8 @@ function BorrowerView() {
                 <p><strong>Token:</strong> <span className="font-mono text-xs break-all">{token}</span></p>
                 <p><strong>Amount Requested:</strong> {formatEther(amountRequested)} Tokens</p>
                 <p><strong>Your Max Interest:</strong> {Number(maxInterestBps) / 100}%</p>
-                <p><strong>Loan Type:</strong> {loanType === 1n ? 'Credit' : 'Personal'}</p>
-                {loanType === 1n ? (
+                <p><strong>Loan Type:</strong> {loanType === 1 ? 'Credit' : 'Personal'}</p>
+                {loanType === 1 ? (
                     <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
                 ) : (
                     <>

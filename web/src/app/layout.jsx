@@ -15,28 +15,13 @@ import { GlobalMessageProvider, useGlobalMessage } from '@/context/globalMessage
 // 1. Manually define Polygon Amoy chain
 // This export allows other files (like page.js for borrower/lender) to import it
 
-// export const polygonAmoyChain = defineChain({
-//   id: 80002,
-//   name: 'Polygon Amoy',
-//   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-//   rpcUrls: {
-//     default: { http: ['https://rpc-amoy.polygon.technology/'] },
-//     public: { http: ['https://rpc-amoy.polygon.technology/'] },
-//   },
-//   blockExplorers: {
-//     default: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy' },
-//     etherscan: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy'},
-//   },
-//   testnet: true,
-// });
-
 export const polygonAmoyChain = defineChain({
-  id: 31337,
+  id: 80002,
   name: 'Polygon Amoy',
   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
   rpcUrls: {
-    default: { http: ['http://127.0.0.1:8545/'] },
-    public: { http: ['http://127.0.0.1:8545/'] },
+    default: { http: ['https://rpc-amoy.polygon.technology/'] },
+    public: { http: ['https://rpc-amoy.polygon.technology/'] },
   },
   blockExplorers: {
     default: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy' },
@@ -44,6 +29,21 @@ export const polygonAmoyChain = defineChain({
   },
   testnet: true,
 });
+
+// export const polygonAmoyChain = defineChain({
+//   id: 31337,
+//   name: 'Polygon Amoy',
+//   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+//   rpcUrls: {
+//     default: { http: ['http://127.0.0.1:8545/'] },
+//     public: { http: ['http://127.0.0.1:8545/'] },
+//   },
+//   blockExplorers: {
+//     default: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy' },
+//     etherscan: { name: 'OKLink Amoy', url: 'https://www.oklink.com/amoy'},
+//   },
+//   testnet: true,
+// });
 
 // 2. Configure chains & providers, using the manually defined Polygon Amoy
 const { chains, publicClient } = configureChains(

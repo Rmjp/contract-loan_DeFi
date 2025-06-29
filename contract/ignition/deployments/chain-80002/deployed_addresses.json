@@ -1,7 +1,7 @@
 {
-  "ProxyModule#CreditLoan": "0x9cF6bCe29CD9c2cEdb42CE552bEe170F6546Aaa8",
-  "ProxyModule#LoanMarket": "0xB4434b86d8db1007b6597c85839BF4fF7E76A98b",
-  "ProxyModule#PersonalLoan": "0x9F9996008712F0c58A1d11DAbd7773CE21d8fC2B",
-  "ProxyModule#ERC1967Proxy": "0x72De565FA39d364E7eb0628F98e07CAC7196634e",
-  "LoanMarketModule#LoanMarketProxy": "0x72De565FA39d364E7eb0628F98e07CAC7196634e"
+  "ProxyModule#CreditLoan": "0x7050f9487d03737B0352d1997BD9BC2B7cE32b67",
+  "ProxyModule#LoanMarket": "0x7c7a4bfA8c70EF81a7a9124Cf3c09Ca58d327F0B",
+  "ProxyModule#PersonalLoan": "0x51835175DE32Df8671AFbDACbE7330E4797FA0C9",
+  "ProxyModule#ERC1967Proxy": "0x23771bca866D315A81c97F990fC5eE4533d6b4D0",
+  "LoanMarketModule#LoanMarketProxy": "0x23771bca866D315A81c97F990fC5eE4533d6b4D0"
 }

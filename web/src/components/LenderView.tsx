@@ -445,7 +445,7 @@ function LenderView() {
         if (!amountOffer || parseFloat(amountOffer) <= 0) { setMessage("A valid offer amount greater than zero is required."); return; }
         if (!interestOffer || parseFloat(interestOffer) < 0) { setMessage("A valid interest offer (e.g., 5.25 for 5.25%) is required."); return; }
 
-        const isCreditLoan = loanDetailsForAction[4] === 1n;
+        const isCreditLoan = loanDetailsForAction[4] === 1;
 
         if (isCreditLoan) {
             if (!paybackTimeOffer) { setMessage("A payback date is required."); return; }
@@ -612,8 +612,8 @@ function LenderView() {
                 <p><strong>Token:</strong> <span className="font-mono text-xs">{token}</span></p>
                 <p><strong>Amount Requested:</strong> {formatEther(amountRequested)} Tokens</p>
                 <p><strong>Borrower's Max Interest:</strong> {Number(maxInterestBps) / 100}%</p>
-                <p><strong>Loan Type:</strong> {loanType === 1n ? 'Credit' : 'Personal'}</p>
-                {loanType === 1n ? (
+                <p><strong>Loan Type:</strong> {loanType === 1 ? 'Credit' : 'Personal'}</p>
+                {loanType === 1 ? (
                     <p><strong>Requested Due Date:</strong> {formatDateFromSeconds(requestedDueDate)}</p>
                 ) : (
                     <>
@@ -756,7 +756,7 @@ function LenderView() {
                                         <label htmlFor="amountOfferL" className={labelClass}>Your Amount Offer</label>
                                         <input id="amountOfferL" type="number" value={amountOffer} onChange={(e) => setAmountOffer(e.target.value)} placeholder={`e.g., ${loanDetailsForAction ? formatEther(loanDetailsForAction[2]) : '0.0'}`} className={inputClass} />
                                     </div>
-                                    {loanDetailsForAction && loanDetailsForAction[4] === 1n ? (
+                                    {loanDetailsForAction && loanDetailsForAction[4] === 1 ? (
                                         <div>
                                             <label htmlFor="paybackTimeOfferL" className={labelClass}>Your Payback Date</label>
                                             <input id="paybackTimeOfferL" type="date" value={paybackTimeOffer} onChange={(e) => setPaybackTimeOffer(e.target.value)} className={inputClass} />
@@ -785,7 +785,7 @@ function LenderView() {
                                             isSubmittingOffer ||
                                             !interestOffer ||
                                             !amountOffer ||
-                                            (loanDetailsForAction && loanDetailsForAction[4] === 1n
+                                            (loanDetailsForAction && loanDetailsForAction[4] === 1
                                                 ? !paybackTimeOffer
                                                 : !numPaymentsOffer || !paymentIntervalDaysOffer)
                                         }
@@ -794,7 +794,7 @@ function LenderView() {
                                             isSubmittingOffer ||
                                                 !interestOffer ||
                                                 !amountOffer ||
-                                                (loanDetailsForAction && loanDetailsForAction[4] === 1n
+                                                (loanDetailsForAction && loanDetailsForAction[4] === 1
                                                     ? !paybackTimeOffer
                                                     : !numPaymentsOffer || !paymentIntervalDaysOffer)
                                         )} flex-1`}

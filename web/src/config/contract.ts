@@ -4,7 +4,7 @@ export const TOKEN_ADDRESS_LIST = [
   { name: 'Test', address: "0x17E6459067dDbB870F8D4E961454eC39C695d35C" }
   ]
 
-export const CONTRACT_ADDRESS = "0x9ABa4668d35e460beB6c1A92911A27BBfE76325B";
+export const CONTRACT_ADDRESS = "0x23771bca866D315A81c97F990fC5eE4533d6b4D0";
 
 export const ERC20_ABI = [
   {
