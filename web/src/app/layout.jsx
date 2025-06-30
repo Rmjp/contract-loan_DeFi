@@ -144,6 +144,9 @@ function AppHeader({ setGlobalMessage }) {
           <Link href="/credit" className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md focus:ring-2 focus:ring-opacity-50 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold text-xs sm:text-sm hover:from-pink-600 hover:to-rose-600">
               Credit Loan
           </Link>
+          <Link href="/vault" className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md focus:ring-2 focus:ring-opacity-50 bg-gradient-to-r from-yellow-500 to-amber-500 text-white font-semibold text-xs sm:text-sm hover:from-yellow-600 hover:to-amber-600">
+              Vault
+          </Link>
         </nav>
     </header>
   );
