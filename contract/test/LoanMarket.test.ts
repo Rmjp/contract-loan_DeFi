@@ -5,6 +5,8 @@ import LoanMarketModule from "../ignition/modules/LoanMarketModule";
 import { ProxyModule } from "../ignition/modules/ProxyModule";
 import { TestTokenModule } from "../ignition/modules/TestToken";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { CreditLoan, LoanMarket, PersonalLoan, TestToken, Verifiable } from "../typechain-types";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("LoanMarket (Ignition) Integration with External Verifier/Token", function () {
   let dao: {
@@ -13,8 +15,8 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
     creditLoanImpl: any;
     loanMarketImpl: any;
   };
-  let verifier: Contract;
-  let token: Contract;
+  let verifier: Verifiable;
+  let token: TestToken;
   let borrower: any, lender: any, other: any;
 
   // Existing deployed addresses
@@ -27,12 +29,17 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
     // Attach to existing verifier and token by address
     verifier = await ethers.getContractAt("Verifiable", verifierAddress);
-    const tokenDeployment = await hre.ignition.deploy(TestTokenModule);
+    const tokenDeployment: { testToken: { address: string } } = await hre.ignition.deploy(TestTokenModule);
     token = await ethers.getContractAt("TestToken", tokenDeployment.testToken.address);
     tokenAddress = tokenDeployment.testToken.address;
 
     // Deploy LoanMarket & implementations via Ignition
-    const deployment = await hre.ignition.deploy(ProxyModule, {
+    const deployment: {
+      proxy: { address: string };
+      loanMarketImpl: { address: string };
+      personalLoanImpl: { address: string };
+      creditLoanImpl: { address: string };
+    } = await hre.ignition.deploy(ProxyModule, {
       parameters: {ProxyModule:{"verifierAddress":"0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c"}},
     });
 
@@ -150,15 +157,15 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
   });
   describe("CreditLoan Contract Functions", function () {
   let dao: {
-    loanMarket: Contract;
-    personalLoanImpl: Contract;
-    creditLoanImpl: Contract;
-    loanMarketImpl: Contract;
+    loanMarket: LoanMarket;
+    personalLoanImpl: PersonalLoan;
+    creditLoanImpl: CreditLoan;
+    loanMarketImpl: LoanMarket;
   };
-  let verifier: Contract;
-  let token: Contract;
+  let verifier: Verifiable;
+  let token: TestToken;
   let borrower: SignerWithAddress, lender: SignerWithAddress, other: SignerWithAddress;
-  let creditLoan: Contract;
+  let creditLoan: CreditLoan;
   const LOAN_AMOUNT = ethers.parseEther("1000");
   let dueDate: bigint;
 
@@ -170,7 +177,12 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
     token    = await ethers.getContractAt("TestToken", tokenAddress);
 
     // deploy LoanMarket & impls
-    const deployment = await hre.ignition.deploy(ProxyModule, {
+    const deployment: {
+      proxy: { address: string };
+      loanMarketImpl: { address: string };
+      personalLoanImpl: { address: string };
+      creditLoanImpl: { address: string };
+    } = await hre.ignition.deploy(ProxyModule, {
       parameters: { ProxyModule: { verifierAddress } },
     });
     dao = {
@@ -288,7 +300,7 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
   });
 
   describe("PersonalLoan Contract Functions", function () {
-    let personalLoan: Contract;
+    let personalLoan: PersonalLoan;
     const NUM_PAYMENTS = 4n;
     const INTERVAL = 7n * 24n * 3600n; // 1 week
     const INTEREST_BPS = 400n;
@@ -315,7 +327,12 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
       verifier = await ethers.getContractAt("Verifiable", verifierAddress);
       token = await ethers.getContractAt("TestToken", tokenAddress);
 
-      const deployment = await hre.ignition.deploy(ProxyModule, {
+      const deployment: {
+        proxy: { address: string };
+        loanMarketImpl: { address: string };
+        personalLoanImpl: { address: string };
+        creditLoanImpl: { address: string };
+      } = await hre.ignition.deploy(ProxyModule, {
         parameters: { ProxyModule: { verifierAddress } },
       });
       dao = {
@@ -374,6 +391,7 @@ describe("LoanMarket (Ignition) Integration with External Verifier/Token", funct
 
 
       const block = await ethers.provider.getBlock(tx.blockNumber!);
+      if (!block) throw new Error("Block not found");
       expect(await personalLoan.nextDueDate()).to.equal(BigInt(block.timestamp) + INTERVAL);
     });
 
