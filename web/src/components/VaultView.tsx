@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAccount, useContractRead, useContractWrite } from 'wagmi';
 import { Address, parseEther, formatEther } from 'viem';
-import { VAULT_MANAGER_ADDRESS, ERC20_ABI, TOKEN_ADDRESS_LIST } from '@/config/contract';
+import { VAULT_MANAGER_ADDRESS, VERIFIER_ADDRESS, ERC20_ABI, TOKEN_ADDRESS_LIST } from '@/config/contract';
 import { VAULT_MANAGER_ABI } from '@/config/vaultmanager_abi';
 import { LENDING_VAULT_ABI } from '@/config/lendingvault_abi';
 
@@ -13,7 +13,6 @@ export default function VaultView() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<string>(TOKEN_ADDRESS_LIST.length > 0 ? TOKEN_ADDRESS_LIST[0].address : '');
   const [customToken, setCustomToken] = useState('');
-  const [createVerifier, setCreateVerifier] = useState('');
   const [createRequestId, setCreateRequestId] = useState('');
   const [loanAddress, setLoanAddress] = useState('');
 
@@ -87,9 +86,8 @@ export default function VaultView() {
         {selectedToken === 'custom' && (
           <input className="bg-slate-700 p-2 rounded w-full" placeholder="Custom token address" value={customToken} onChange={e => setCustomToken(e.target.value)} />
         )}
-        <input className="bg-slate-700 p-2 rounded w-full" placeholder="Verifier address" value={createVerifier} onChange={e => setCreateVerifier(e.target.value)} />
         <input className="bg-slate-700 p-2 rounded w-full" placeholder="Request ID" value={createRequestId} onChange={e => setCreateRequestId(e.target.value)} />
-        <button className="bg-purple-600 text-white px-4 py-2 rounded" onClick={() => createVaultWrite({ args: [(selectedToken === 'custom' ? customToken : selectedToken) as Address, createVerifier as Address, BigInt(createRequestId || '0')] })}>
+        <button className="bg-purple-600 text-white px-4 py-2 rounded" onClick={() => createVaultWrite({ args: [(selectedToken === 'custom' ? customToken : selectedToken) as Address, VERIFIER_ADDRESS as Address, BigInt(createRequestId || '0')] })}>
           Create Vault
         </button>
       </div>
