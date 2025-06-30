@@ -17,15 +17,19 @@ const config: HardhatUserConfig = {
         80002: {
           hardforkHistory: {
             "shanghai": 22486000,
-          }
+          },
         },
       },
-      forking: {
-        // url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
-        url: "https://rpc-amoy.polygon.technology/",
-        // (Optional) Pin a block number to run tests on a deterministic state
-        blockNumber: 22524270
-      },
+      ...(process.env.NO_FORK
+        ? {}
+        : {
+            forking: {
+              // url: "https://polygon-amoy.g.alchemy.com/v2/" + process.env.ALCHEMY_API_KEY_POLYGON_AMOY,
+              url: "https://rpc-amoy.polygon.technology/",
+              // (Optional) Pin a block number to run tests on a deterministic state
+              blockNumber: 22524270,
+            },
+          }),
       // hardfork: "cancun",
     },
     local: {
