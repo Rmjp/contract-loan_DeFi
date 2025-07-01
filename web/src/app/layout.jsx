@@ -147,6 +147,9 @@ function AppHeader({ setGlobalMessage }) {
           <Link href="/vault" className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md focus:ring-2 focus:ring-opacity-50 bg-gradient-to-r from-yellow-500 to-amber-500 text-white font-semibold text-xs sm:text-sm hover:from-yellow-600 hover:to-amber-600">
               Vault
           </Link>
+          <Link href="/deploy" className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md focus:ring-2 focus:ring-opacity-50 bg-gradient-to-r from-gray-500 to-slate-500 text-white font-semibold text-xs sm:text-sm hover:from-gray-600 hover:to-slate-600">
+              Deploy
+          </Link>
         </nav>
     </header>
   );
