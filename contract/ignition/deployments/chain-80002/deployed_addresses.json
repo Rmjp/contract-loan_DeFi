@@ -3,5 +3,6 @@
   "ProxyModule#LoanMarket": "0x7c7a4bfA8c70EF81a7a9124Cf3c09Ca58d327F0B",
   "ProxyModule#PersonalLoan": "0x51835175DE32Df8671AFbDACbE7330E4797FA0C9",
   "ProxyModule#ERC1967Proxy": "0x23771bca866D315A81c97F990fC5eE4533d6b4D0",
-  "LoanMarketModule#LoanMarketProxy": "0x23771bca866D315A81c97F990fC5eE4533d6b4D0"
+  "LoanMarketModule#LoanMarketProxy": "0x23771bca866D315A81c97F990fC5eE4533d6b4D0",
+  "VaultManagerModule#VaultManager": "0x3DBa092C401E1AA6CD5DB40BCbd52121F3F31de5"
 }

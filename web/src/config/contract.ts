@@ -6,9 +6,9 @@ export const TOKEN_ADDRESS_LIST = [
 
 export const CONTRACT_ADDRESS = "0x23771bca866D315A81c97F990fC5eE4533d6b4D0";
 // Address of the VaultManager contract (update with your deployment)
-export const VAULT_MANAGER_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const VAULT_MANAGER_ADDRESS = "0x3DBa092C401E1AA6CD5DB40BCbd52121F3F31de5";
 // Address of the UniversalVerifier contract (update with your deployment)
-export const VERIFIER_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const VERIFIER_ADDRESS = "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c";
 
 export const ERC20_ABI = [
   {
