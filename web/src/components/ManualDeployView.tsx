@@ -14,13 +14,13 @@ export default function ManualDeployView() {
   const [loanType, setLoanType] = useState<'Personal' | 'Credit'>('Personal');
   const [borrower, setBorrower] = useState('');
   const [lender, setLender] = useState('');
-  const [token, setToken] = useState<string>(TOKEN_ADDRESS_LIST[0]?.address || '');
-  const [customToken, setCustomToken] = useState('');
+  const [token, setToken] = useState<string>(TOKEN_ADDRESS_LIST.length > 0 ? TOKEN_ADDRESS_LIST[0].address : '');
+  const [customToken, setCustomToken] = useState<string>('');
   const [principal, setPrincipal] = useState('');
   const [interest, setInterest] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDateInput, setDueDateInput] = useState<string>('');
   const [payments, setPayments] = useState('');
-  const [interval, setInterval] = useState('');
+  const [intervalDays, setIntervalDays] = useState('');
   const [deployHash, setDeployHash] = useState('');
 
   const selectedToken = token === 'custom' ? customToken : token;
@@ -29,6 +29,17 @@ export default function ManualDeployView() {
     if (!walletClient || !selectedToken) return;
     const abi = loanType === 'Personal' ? PERSONAL_LOAN_ABI : CREDIT_LOAN_ABI;
     const bytecode = loanType === 'Personal' ? PERSONAL_LOAN_BYTECODE : CREDIT_LOAN_BYTECODE;
+
+    const interestBps = interest ? BigInt(Math.round(parseFloat(interest) * 100)) : 0n;
+    let dueDateSeconds = 0n;
+    if (loanType === 'Credit' && dueDateInput) {
+      const [y, m, d] = dueDateInput.split('-').map(Number);
+      const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      dueDateSeconds = BigInt(Math.floor(dateObj.getTime() / 1000));
+    }
+    const intervalSeconds = loanType === 'Personal' && intervalDays
+      ? BigInt(parseInt(intervalDays) * 86400)
+      : 0n;
 
     try {
       const hash = await walletClient.deployContract({
@@ -39,10 +50,10 @@ export default function ManualDeployView() {
           lender as Address,
           selectedToken as Address,
           parseEther(principal || '0'),
-          BigInt(interest || '0'),
-          loanType === 'Credit' ? BigInt(dueDate || '0') : 0n,
+          interestBps,
+          loanType === 'Credit' ? dueDateSeconds : 0n,
           loanType === 'Personal' ? BigInt(payments || '0') : 0n,
-          loanType === 'Personal' ? BigInt(interval || '0') : 0n,
+          loanType === 'Personal' ? intervalSeconds : 0n,
           CONTRACT_ADDRESS as Address,
         ],
       });
@@ -71,29 +82,31 @@ export default function ManualDeployView() {
         <input className="w-full p-2 bg-slate-700 rounded" placeholder="0x..." value={lender} onChange={e => setLender(e.target.value)} />
       </div>
       <div>
-        <label className="block text-sm mb-1">Token</label>
+        <label className="block text-sm mb-1">Token Address (ERC20)</label>
         <select className="w-full p-2 bg-slate-700 rounded" value={token} onChange={e => setToken(e.target.value)}>
           {TOKEN_ADDRESS_LIST.map(t => (
-            <option key={t.address} value={t.address}>{t.name}</option>
+            <option key={t.name} value={t.address}>
+              {t.name} ({t.address.slice(0,6)}...)
+            </option>
           ))}
-          <option value="custom">Custom</option>
+          <option value="custom">Custom Address</option>
         </select>
         {token === 'custom' && (
-          <input className="w-full mt-2 p-2 bg-slate-700 rounded" placeholder="Custom token" value={customToken} onChange={e => setCustomToken(e.target.value)} />
+          <input className="w-full mt-2 p-2 bg-slate-700 rounded" placeholder="Enter custom token address (0x...)" value={customToken} onChange={e => setCustomToken(e.target.value)} />
         )}
       </div>
       <div>
         <label className="block text-sm mb-1">Principal Amount</label>
-        <input className="w-full p-2 bg-slate-700 rounded" placeholder="Amount" value={principal} onChange={e => setPrincipal(e.target.value)} />
+        <input className="w-full p-2 bg-slate-700 rounded" placeholder="e.g., 100" value={principal} onChange={e => setPrincipal(e.target.value)} />
       </div>
       <div>
-        <label className="block text-sm mb-1">Interest BPS</label>
-        <input className="w-full p-2 bg-slate-700 rounded" placeholder="500" value={interest} onChange={e => setInterest(e.target.value)} />
+        <label className="block text-sm mb-1">Interest (%)</label>
+        <input className="w-full p-2 bg-slate-700 rounded" placeholder="e.g., 5.25 for 5.25%" value={interest} onChange={e => setInterest(e.target.value)} />
       </div>
       {loanType === 'Credit' && (
         <div>
-          <label className="block text-sm mb-1">Due Date (timestamp)</label>
-          <input className="w-full p-2 bg-slate-700 rounded" placeholder="Unix timestamp" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+          <label className="block text-sm mb-1">Preferred Due Date</label>
+          <input type="date" className="w-full p-2 bg-slate-700 rounded" value={dueDateInput} onChange={e => setDueDateInput(e.target.value)} />
         </div>
       )}
       {loanType === 'Personal' && (
@@ -103,8 +116,8 @@ export default function ManualDeployView() {
             <input className="w-full p-2 bg-slate-700 rounded" placeholder="e.g. 12" value={payments} onChange={e => setPayments(e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm mb-1">Payment Interval (seconds)</label>
-            <input className="w-full p-2 bg-slate-700 rounded" placeholder="e.g. 2592000" value={interval} onChange={e => setInterval(e.target.value)} />
+            <label className="block text-sm mb-1">Payment Interval (days)</label>
+            <input className="w-full p-2 bg-slate-700 rounded" placeholder="e.g. 30" value={intervalDays} onChange={e => setIntervalDays(e.target.value)} />
           </div>
         </>
       )}
