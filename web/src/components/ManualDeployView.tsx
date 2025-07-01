@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useWalletClient, useAccount } from 'wagmi';
+import { useWalletClient, useAccount, usePublicClient } from 'wagmi';
 import { parseEther, Address } from 'viem';
 import { TOKEN_ADDRESS_LIST, CONTRACT_ADDRESS } from '@/config/contract';
 import { CREDIT_LOAN_ABI } from '@/config/creditloan_abi';
@@ -10,6 +10,7 @@ import { CREDIT_LOAN_BYTECODE, PERSONAL_LOAN_BYTECODE } from '@/config/loan_byte
 export default function ManualDeployView() {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   const [loanType, setLoanType] = useState<'Personal' | 'Credit'>('Personal');
   const [borrower, setBorrower] = useState('');
@@ -26,7 +27,7 @@ export default function ManualDeployView() {
   const selectedToken = token === 'custom' ? customToken : token;
 
   const handleDeploy = async () => {
-    if (!walletClient || !selectedToken) return;
+    if (!walletClient || !selectedToken || !address) return;
     const abi = loanType === 'Personal' ? PERSONAL_LOAN_ABI : CREDIT_LOAN_ABI;
     const bytecode = loanType === 'Personal' ? PERSONAL_LOAN_BYTECODE : CREDIT_LOAN_BYTECODE;
 
@@ -42,9 +43,14 @@ export default function ManualDeployView() {
       : 0n;
 
     try {
-      const hash = await walletClient.deployContract({
+      const deployHash = await walletClient.deployContract({ abi: [], bytecode });
+      setDeployHash(deployHash);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: deployHash });
+      if (!receipt.contractAddress) return;
+      await walletClient.writeContract({
+        address: receipt.contractAddress as Address,
         abi,
-        bytecode,
+        functionName: 'initialize',
         args: [
           (borrower || address) as Address,
           lender as Address,
@@ -57,7 +63,6 @@ export default function ManualDeployView() {
           CONTRACT_ADDRESS as Address,
         ],
       });
-      setDeployHash(hash);
     } catch (err) {
       console.error(err);
     }
