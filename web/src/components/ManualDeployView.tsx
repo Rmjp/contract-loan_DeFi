@@ -60,7 +60,8 @@ export default function ManualDeployView() {
           loanType === 'Credit' ? dueDateSeconds : 0n,
           loanType === 'Personal' ? BigInt(payments || '0') : 0n,
           loanType === 'Personal' ? intervalSeconds : 0n,
-          CONTRACT_ADDRESS as Address,
+          // CONTRACT_ADDRESS as Address,
+          address as Address, // Lender is the deployer in this case
         ],
       });
     } catch (err) {
