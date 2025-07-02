@@ -11,6 +11,7 @@ export default function PersonalLoanView() {
   const [loanId, setLoanId] = useState('');
   const [loanIdList, setLoanIdList] = useState<string[]>([]);
   const [approveAmt, setApproveAmt] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
   const { data: loanRequestCount } = useContractRead({
     address: CONTRACT_ADDRESS as Address,
     abi: CONTRACT_ABI,
@@ -26,52 +27,54 @@ export default function PersonalLoanView() {
     enabled: !!loanId && /^\d+$/.test(loanId),
   });
 
-  const { data: installmentAmount } = useContractRead({
-    address: loanAddress as Address,
+  const selectedLoanAddress = (manualAddress || loanAddress) as Address | undefined;
+
+  const { data: installmentAmount, refetch: refetchInstallmentAmount } = useContractRead({
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'installmentAmount',
-    enabled: !!loanAddress,
+    enabled: !!selectedLoanAddress,
   });
 
-  const { data: paymentsMade } = useContractRead({
-    address: loanAddress as Address,
+  const { data: paymentsMade, refetch: refetchPaymentsMade } = useContractRead({
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'paymentsMade',
-    enabled: !!loanAddress,
+    enabled: !!selectedLoanAddress,
   });
 
-  const { data: numberOfPayments } = useContractRead({
-    address: loanAddress as Address,
+  const { data: numberOfPayments, refetch: refetchNumberOfPayments } = useContractRead({
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'numberOfPayments',
-    enabled: !!loanAddress,
+    enabled: !!selectedLoanAddress,
   });
 
-  const { data: tokenAddress } = useContractRead({
-    address: loanAddress as Address,
+  const { data: tokenAddress, refetch: refetchTokenAddress } = useContractRead({
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'token',
-    enabled: !!loanAddress,
+    enabled: !!selectedLoanAddress,
   });
 
-  const { data: principalAmount } = useContractRead({
-    address: loanAddress as Address,
+  const { data: principalAmount, refetch: refetchPrincipalAmount } = useContractRead({
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'principalAmount',
-    enabled: !!loanAddress,
+    enabled: !!selectedLoanAddress,
   });
 
-  const { data: allowance } = useContractRead({
+  const { data: allowance, refetch: refetchAllowance } = useContractRead({
     address: tokenAddress as Address,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: address && loanAddress ? [address, loanAddress as Address] : undefined,
-    enabled: !!address && !!tokenAddress && !!loanAddress,
+    args: address && selectedLoanAddress ? [address, selectedLoanAddress as Address] : undefined,
+    enabled: !!address && !!tokenAddress && !!selectedLoanAddress,
     watch: true,
   });
 
   const { write: fundLoanWrite } = useContractWrite({
-    address: loanAddress as Address,
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'fundLoan',
   });
@@ -83,10 +86,19 @@ export default function PersonalLoanView() {
   });
 
   const { write: makePaymentWrite } = useContractWrite({
-    address: loanAddress as Address,
+    address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'makeInstallmentPayment',
   });
+
+  const refreshDetails = () => {
+    refetchInstallmentAmount();
+    refetchPaymentsMade();
+    refetchNumberOfPayments();
+    refetchTokenAddress();
+    refetchPrincipalAmount();
+    refetchAllowance();
+  };
 
   useEffect(() => {
     if (principalAmount !== undefined && approveAmt === '') {
@@ -139,16 +151,31 @@ export default function PersonalLoanView() {
         <select
           className="border p-2 rounded w-full bg-slate-700 text-sky-200"
           value={loanId}
-          onChange={e => setLoanId(e.target.value)}
+          onChange={e => {
+            setLoanId(e.target.value);
+            setManualAddress('');
+          }}
         >
           <option value="">Select Loan ID</option>
           {loanIdList.map(id => (
             <option key={id} value={id}>{id}</option>
           ))}
         </select>
+        <input
+          className="border p-2 rounded w-full bg-slate-700 text-sky-200"
+          placeholder="Or enter contract address"
+          value={manualAddress}
+          onChange={e => {
+            setManualAddress(e.target.value);
+            setLoanId('');
+          }}
+        />
       </div>
-      {loanAddress && (
-        <p className="text-sm text-slate-400 break-all">Contract: {loanAddress as string}</p>
+      {selectedLoanAddress && (
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-slate-400 break-all">Contract: {selectedLoanAddress as string}</p>
+          <button onClick={refreshDetails} className="text-xs px-2 py-1 bg-slate-700 rounded">Refresh</button>
+        </div>
       )}
       {installmentAmount !== undefined && (
         <p className="text-sm text-sky-300">Installment: {formatEther(installmentAmount)} tokens</p>
@@ -174,7 +201,7 @@ export default function PersonalLoanView() {
           <button
             onClick={() => makePaymentWrite()}
             className="bg-sky-600 text-white px-4 py-2 rounded"
-            disabled={!loanAddress}
+            disabled={!selectedLoanAddress}
           >Make Installment Payment</button>
         </>
       ) : (
@@ -186,9 +213,9 @@ export default function PersonalLoanView() {
             onChange={e => setApproveAmt(e.target.value)}
           />
           <button
-            onClick={() => approveWrite({ args: [loanAddress as Address, parseEther(approveAmt || '0')] })}
+            onClick={() => approveWrite({ args: [selectedLoanAddress as Address, parseEther(approveAmt || '0')] })}
             className="bg-sky-600 text-white px-4 py-2 rounded"
-            disabled={!loanAddress || !tokenAddress || approveAmt === ''}
+            disabled={!selectedLoanAddress || !tokenAddress || approveAmt === ''}
           >Approve Tokens</button>
           {allowance !== undefined && (
             <p className="text-sm text-slate-300 mt-1">
@@ -198,7 +225,7 @@ export default function PersonalLoanView() {
           <button
             onClick={() => fundLoanWrite()}
             className="bg-purple-600 text-white px-4 py-2 rounded"
-            disabled={!loanAddress}
+            disabled={!selectedLoanAddress}
           >Fund Loan</button>
         </div>
       )}
