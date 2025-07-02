@@ -29,42 +29,42 @@ export default function PersonalLoanView() {
 
   const selectedLoanAddress = (manualAddress || loanAddress) as Address | undefined;
 
-  const { data: installmentAmount } = useContractRead({
+  const { data: installmentAmount, refetch: refetchInstallmentAmount } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'installmentAmount',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: paymentsMade } = useContractRead({
+  const { data: paymentsMade, refetch: refetchPaymentsMade } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'paymentsMade',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: numberOfPayments } = useContractRead({
+  const { data: numberOfPayments, refetch: refetchNumberOfPayments } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'numberOfPayments',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: tokenAddress } = useContractRead({
+  const { data: tokenAddress, refetch: refetchTokenAddress } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'token',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: principalAmount } = useContractRead({
+  const { data: principalAmount, refetch: refetchPrincipalAmount } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: PERSONAL_LOAN_ABI,
     functionName: 'principalAmount',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: allowance } = useContractRead({
+  const { data: allowance, refetch: refetchAllowance } = useContractRead({
     address: tokenAddress as Address,
     abi: ERC20_ABI,
     functionName: 'allowance',
@@ -90,6 +90,15 @@ export default function PersonalLoanView() {
     abi: PERSONAL_LOAN_ABI,
     functionName: 'makeInstallmentPayment',
   });
+
+  const refreshDetails = () => {
+    refetchInstallmentAmount();
+    refetchPaymentsMade();
+    refetchNumberOfPayments();
+    refetchTokenAddress();
+    refetchPrincipalAmount();
+    refetchAllowance();
+  };
 
   useEffect(() => {
     if (principalAmount !== undefined && approveAmt === '') {
@@ -163,7 +172,10 @@ export default function PersonalLoanView() {
         />
       </div>
       {selectedLoanAddress && (
-        <p className="text-sm text-slate-400 break-all">Contract: {selectedLoanAddress as string}</p>
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-slate-400 break-all">Contract: {selectedLoanAddress as string}</p>
+          <button onClick={refreshDetails} className="text-xs px-2 py-1 bg-slate-700 rounded">Refresh</button>
+        </div>
       )}
       {installmentAmount !== undefined && (
         <p className="text-sm text-sky-300">Installment: {formatEther(installmentAmount)} tokens</p>

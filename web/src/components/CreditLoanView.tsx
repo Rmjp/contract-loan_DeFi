@@ -33,35 +33,35 @@ export default function CreditLoanView() {
 
   const selectedLoanAddress = (manualAddress || loanAddress) as Address | undefined;
 
-  const { data: outstanding } = useContractRead({
+  const { data: outstanding, refetch: refetchOutstanding } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: CREDIT_LOAN_ABI,
     functionName: 'outstandingBalance',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: available } = useContractRead({
+  const { data: available, refetch: refetchAvailable } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: CREDIT_LOAN_ABI,
     functionName: 'getAvailableCredit',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: tokenAddress } = useContractRead({
+  const { data: tokenAddress, refetch: refetchTokenAddress } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: CREDIT_LOAN_ABI,
     functionName: 'token',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: principalAmount } = useContractRead({
+  const { data: principalAmount, refetch: refetchPrincipalAmount } = useContractRead({
     address: selectedLoanAddress as Address,
     abi: CREDIT_LOAN_ABI,
     functionName: 'principalAmount',
     enabled: !!selectedLoanAddress,
   });
 
-  const { data: allowance } = useContractRead({
+  const { data: allowance, refetch: refetchAllowance } = useContractRead({
     address: tokenAddress as Address,
     abi: ERC20_ABI,
     functionName: 'allowance',
@@ -93,6 +93,14 @@ export default function CreditLoanView() {
     abi: ERC20_ABI,
     functionName: 'approve',
   });
+
+  const refreshDetails = () => {
+    refetchOutstanding();
+    refetchAvailable();
+    refetchTokenAddress();
+    refetchPrincipalAmount();
+    refetchAllowance();
+  };
 
   useEffect(() => {
     if (outstanding !== undefined && repayAmt === '') {
@@ -167,7 +175,10 @@ export default function CreditLoanView() {
         />
       </div>
       {selectedLoanAddress && (
-        <p className="text-sm text-slate-400 break-all">Contract: {selectedLoanAddress as string}</p>
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-slate-400 break-all">Contract: {selectedLoanAddress as string}</p>
+          <button onClick={refreshDetails} className="text-xs px-2 py-1 bg-slate-700 rounded">Refresh</button>
+        </div>
       )}
       {outstanding !== undefined && (
         <p className="text-sm text-sky-300">
