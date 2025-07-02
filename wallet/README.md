@@ -1,3 +1,7 @@
+# Wallet Demo
+
+This demo showcases a simple React-based extension integrating Polygon ID SDK for issuing and verifying credentials.
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

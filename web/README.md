@@ -1,3 +1,7 @@
+# Web Interface
+
+This Next.js application lets users request and manage loans through the deployed contracts.
+
 # Loan Platform Web Interface
 
 This is a Next.js web application for interacting with the Loan smart contract.
