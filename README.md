@@ -8,9 +8,6 @@ This repository contains a collection of smart contracts, front-end applications
 - **web/** – Next.js web client for interacting with the contracts.
 - **wallet/** – React wallet extension demo based on Polygon ID SDK.
 - **docs/** – Pitch deck and design documents.
-- **circom/** – Circom circuits for future zero-knowledge features (currently empty).
-- **contracts-iden3/** – Placeholder for Iden3 contracts (currently empty).
-- **tutorial-examples/** – Examples referenced in documentation (currently empty).
 
 Each directory contains its own README with further setup instructions.
 
